@@ -1,0 +1,29 @@
+{
+  "tasks": {
+    "test": "deno test --allow-all",
+    "test:coverage": "deno test --allow-all --coverage=coverage",
+    "test:watch": "deno test --allow-all --watch"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": true,
+    "proseWrap": "preserve"
+  },
+  "test": {
+    "files": {
+      "include": ["tests/**/*.test.ts"]
+    }
+  }
+}
