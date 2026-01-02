@@ -1,0 +1,43 @@
+# Supabase Configuration
+# This file configures Supabase Edge Functions and project settings
+
+[project]
+# Project reference will be set when linking to Supabase
+# Run: supabase link --project-ref your-project-ref
+
+[api]
+# API settings
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+# Database settings
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+# Supabase Studio settings
+enabled = true
+port = 54323
+api_url = "http://localhost:54321"
+
+[functions]
+# Edge Functions settings
+# Functions are deployed to: https://your-project-ref.supabase.co/functions/v1/<function-name>
+
+[functions.auth]
+# Auth Edge Function configuration
+verify_jwt = false  # JWT verification handled in function code
+
+[functions.workflows]
+# Workflows Edge Function configuration
+verify_jwt = false  # JWT verification handled in function code
+
+[functions.health]
+# Health check Edge Function configuration
+verify_jwt = false  # No authentication required for health checks
+
