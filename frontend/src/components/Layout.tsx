@@ -5,16 +5,12 @@
  * such as header, navigation, and footer.
  */
 
-import React from "react";
-
-interface LayoutProps {
-  children: React.ReactNode;
-}
+import type { PropsWithChildren } from "react";
 
 /**
  * Layout component
  */
-export const Layout: React.FC<LayoutProps> = ({ children }) => {
+export const Layout = ({ children }: PropsWithChildren) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-gray-800 text-white p-4">
