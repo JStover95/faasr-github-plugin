@@ -34,7 +34,7 @@ A user who has already installed FaaSr wants to register a workflow they created
 
 **Acceptance Scenarios**:
 
-1. **Given** a user has successfully installed FaaSr (authenticated and fork created), **When** they upload a workflow JSON file through the web app, **Then** the system validates the file format
+1. **Given** a user has authenticated with GitHub and has a FaaSr-workflow fork (existing or newly created), **When** they upload a workflow JSON file through the web app, **Then** the system processes the file
 2. **Given** a user uploads a valid workflow JSON file, **When** the system processes the upload, **Then** the file is committed to the user's FaaSr-workflow fork
 3. **Given** a workflow JSON file has been committed to the fork, **When** the commit is successful, **Then** the FaaSr Register workflow is automatically triggered with the correct workflow file name
 4. **Given** the registration workflow has been triggered, **When** the process completes, **Then** the user receives a notification indicating successful registration or any errors that occurred
@@ -44,9 +44,9 @@ A user who has already installed FaaSr wants to register a workflow they created
 ### Edge Cases
 
 - What happens when a user already has a fork of the FaaSr-workflow repository? (System should detect existing fork and use it instead of creating a duplicate)
-- How does the system handle authentication failures or expired GitHub tokens? (User should be prompted to re-authenticate with clear error messaging)
+- How does the system handle authentication failures or expired GitHub tokens? (For PoC, user must re-authenticate with GitHub. State does not persist between sessions)
 - What happens when a user uploads an invalid or malformed workflow JSON file? (Malformed JSON will cause the FaaSr Register workflow to fail. For PoC, handle this case the same as any other workflow failure state - user receives notification of the failure)
-- How does the system handle network failures during repository forking? (System should retry with exponential backoff and notify user of the failure)
+- How does the system handle network failures during repository forking? (For PoC, system notifies user of the failure. User can retry the operation)
 - What happens when the FaaSr Register workflow fails after being triggered? (User should receive notification of the failure with access to error logs)
 - How does the system handle concurrent uploads from the same user? (Out of scope for PoC. System assumes one upload at a time per user)
 - What happens when a user's GitHub account lacks permissions to create repositories? (System should detect this and provide clear guidance on required permissions)
@@ -62,21 +62,19 @@ A user who has already installed FaaSr wants to register a workflow they created
 - **FR-005**: System MUST create a fork of the FaaSr-workflow repository in the authenticated user's GitHub account
 - **FR-006**: System MUST detect if a fork already exists in the user's account and use the existing fork instead of creating a duplicate
 - **FR-007**: System MUST provide a file upload interface that accepts workflow JSON files
-- **FR-008**: System MUST validate uploaded workflow JSON files for correct format and structure before processing
+- **FR-008**: System MUST validate that uploaded files are valid JSON format before processing
 - **FR-009**: System MUST commit uploaded workflow JSON files to the user's FaaSr-workflow fork
 - **FR-010**: System MUST automatically trigger the FaaSr Register GitHub workflow after successfully committing a workflow JSON file
 - **FR-011**: System MUST pass the correct workflow file name as a parameter when triggering the FaaSr Register workflow
 - **FR-012**: System MUST provide user notifications for successful operations (authentication, fork creation, file upload, workflow registration)
 - **FR-013**: System MUST provide user notifications for failed operations with clear error messages
-- **FR-014**: System MUST handle authentication token refresh when tokens expire
-- **FR-015**: System MUST maintain user session state after authentication to allow multiple operations without re-authentication
 
 ### Key Entities *(include if feature involves data)*
 
-- **User Account**: Represents an authenticated GitHub user who has installed FaaSr. Key attributes include GitHub user ID, authentication tokens, and session state.
-- **Workflow JSON File**: Represents a FaaSr workflow configuration file created by the user in the FaaSr Workflow Builder GUI. Key attributes include file name, file content (JSON structure), validation status, and upload timestamp.
+- **User Account**: Represents an authenticated GitHub user who has installed FaaSr. Key attributes include GitHub user ID and authentication tokens. For PoC, state does not persist between sessions.
+- **Workflow JSON File**: Represents a FaaSr workflow configuration file created by the user in the FaaSr Workflow Builder GUI. Key attributes include file name and file content (JSON structure).
 - **Repository Fork**: Represents the user's fork of the FaaSr-workflow repository. Key attributes include repository URL, fork status, and relationship to the user account.
-- **Workflow Registration**: Represents the process of registering a workflow JSON file. Key attributes include registration status, workflow file name, trigger timestamp, and relationship to the workflow JSON file.
+- **Workflow Registration**: Represents the process of registering a workflow JSON file. Key attributes include registration status and workflow file name.
 
 ## Success Criteria *(mandatory)*
 
