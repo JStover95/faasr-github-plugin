@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: FaaSr GitHub App MVP API
+  description: |
+    API for FaaSr GitHub App MVP - A web application that allows users to install FaaSr,
+    fork the FaaSr-workflow repository, and upload/register workflow JSON files.
+  version: 1.0.0
+  contact:
+    name: FaaSr Team
+
+servers:
+  - url: http://localhost:54321/functions/v1
+    description: Local Supabase development (via supabase start)
+  - url: https://your-project-ref.supabase.co/functions/v1
+    description: Production Supabase Edge Functions
+
+tags:
+  - name: Authentication
+    description: GitHub App installation and session management
+  - name: Workflows
+    description: Workflow file upload and registration
+  - name: Health
+    description: System health checks
+
+paths:
+  /auth/install:
+    get:
+      tags:
+        - Authentication
+      summary: Initiate GitHub App installation
+      description: |
+        Redirects user to GitHub App installation page. After user installs the app,
+        GitHub redirects to the callback URL with installation information.
+      operationId: initiateInstallation
+      responses:
+        '302':
+          description: Redirect to GitHub App installation page
+          headers:
+            Location:
+              schema:
+                type: string
+                example: https://github.com/apps/faasr/installations/new
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/callback:
+    get:
+      tags:
+        - Authentication
+      summary: Handle GitHub App installation callback
+      description: |
+        Handles the callback from GitHub after app installation. Creates a fork of
+        FaaSr-workflow repository if one doesn't exist. Establishes user session.
+      operationId: handleInstallationCallback
+      parameters:
+        - name: installation_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: GitHub App installation ID
+        - name: setup_action
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [install, update]
+          description: Installation action type
+      responses:
+        '200':
+          description: Installation successful, session established
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/session:
+    get:
+      tags:
+        - Authentication
+      summary: Get current session status
+      description: Returns the current authenticated user session information
+      operationId: getSession
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Session information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Log out current session
+      description: Invalidates the current session
+      operationId: logout
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /workflows/upload:
+    post:
+      tags:
+        - Workflows
+      summary: Upload and register workflow JSON file
+      description: |
+        Uploads a workflow JSON file, validates it, commits it to the user's FaaSr-workflow fork,
+        and triggers the FaaSr Register workflow.
+      operationId: uploadWorkflow
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Workflow JSON file
+      responses:
+        '200':
+          description: Workflow uploaded and registration triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Invalid file or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /workflows/status/{fileName}:
+    get:
+      tags:
+        - Workflows
+      summary: Get workflow registration status
+      description: |
+        Returns the registration status for a specific workflow file.
+        Checks GitHub Actions workflow run status.
+      operationId: getWorkflowStatus
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Name of the workflow file (e.g., "my-workflow.json")
+      responses:
+        '200':
+          description: Workflow registration status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Workflow file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns API health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Express session cookie
+
+  schemas:
+    InstallationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "FaaSr installed successfully"
+        user:
+          $ref: '#/components/schemas/UserInfo'
+        fork:
+          $ref: '#/components/schemas/ForkInfo'
+
+    SessionResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/UserInfo'
+        fork:
+          $ref: '#/components/schemas/ForkInfo'
+          nullable: true
+
+    UserInfo:
+      type: object
+      properties:
+        login:
+          type: string
+          example: "octocat"
+        id:
+          type: number
+          example: 1
+        avatarUrl:
+          type: string
+          format: uri
+          example: "https://github.com/images/error/octocat_happy.gif"
+
+    ForkInfo:
+      type: object
+      properties:
+        owner:
+          type: string
+          example: "octocat"
+        repoName:
+          type: string
+          example: "FaaSr-workflow"
+        url:
+          type: string
+          format: uri
+          example: "https://github.com/octocat/FaaSr-workflow"
+        status:
+          type: string
+          enum: [pending, exists, created, failed]
+          example: "created"
+
+    UploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Workflow uploaded and registration triggered"
+        fileName:
+          type: string
+          example: "my-workflow.json"
+        commitSha:
+          type: string
+          example: "abc123def456"
+        workflowRunId:
+          type: number
+          nullable: true
+          example: 12345678
+        workflowRunUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://github.com/octocat/FaaSr-workflow/actions/runs/12345678"
+
+    WorkflowStatusResponse:
+      type: object
+      properties:
+        fileName:
+          type: string
+          example: "my-workflow.json"
+        status:
+          type: string
+          enum: [pending, running, success, failed]
+          example: "running"
+        workflowRunId:
+          type: number
+          nullable: true
+          example: 12345678
+        workflowRunUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://github.com/octocat/FaaSr-workflow/actions/runs/12345678"
+        errorMessage:
+          type: string
+          nullable: true
+          example: null
+        triggeredAt:
+          type: string
+          format: date-time
+          example: "2025-01-27T10:00:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Invalid workflow file format"
+        details:
+          type: array
+          items:
+            type: string
+          nullable: true
+          example: ["File must be valid JSON", "File name must end with .json"]
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-27T10:00:00Z"
+        version:
+          type: string
+          example: "1.0.0"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters or data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
