@@ -85,6 +85,13 @@ supabase login
    supabase secrets set GITHUB_CLIENT_ID=your_client_id_here
    supabase secrets set GITHUB_CLIENT_SECRET=your_client_secret_here
    supabase secrets set GITHUB_PRIVATE_KEY="$(cat path/to/your-private-key.pem)"
+   supabase secrets set JWT_SECRET=your_strong_random_secret_here
+   ```
+
+   **Note**: For `JWT_SECRET`, use a strong, randomly generated secret (minimum 32 characters). You can generate one using:
+
+   ```bash
+   openssl rand -base64 32
    ```
 
 ### 4. Configure Frontend
