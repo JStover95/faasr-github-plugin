@@ -8,10 +8,10 @@
 
 This document breaks down the implementation of the FaaSr GitHub App MVP into actionable, dependency-ordered tasks organized by user story. Each phase includes tasks categorized into Mocks, Tests, and Implementation.
 
-**Total Tasks**: 75  
+**Total Tasks**: 81  
 **User Story 1 Tasks**: 28  
 **User Story 2 Tasks**: 32  
-**Setup & Foundational Tasks**: 10  
+**Setup & Foundational Tasks**: 16  
 **Polish Tasks**: 5
 
 ## Implementation Strategy
@@ -84,6 +84,14 @@ Phase 5 (Polish)
 - [ ] T018 Create health check Edge Function in `supabase/functions/health/index.ts` (basic health endpoint)
 - [ ] T019 Configure Supabase Edge Function dependencies in `supabase/functions/_shared/deps.ts` (import @octokit packages via npm: specifier)
 - [ ] T020 Create frontend layout component in `frontend/src/components/Layout.tsx` (basic page structure)
+- [ ] T081 [P] Configure Jest coverage tooling for frontend in `frontend/package.json` (jest.config.js with coverage thresholds ≥80%)
+- [ ] T082 [P] Configure Deno coverage tooling for backend in `supabase/tests/` (deno.json with coverage configuration)
+- [ ] T083 [P] Document required GitHub App permissions in `design-docs/github-app-permissions.md` (repository creation, workflow dispatch, file management permissions per FR-004)
+- [ ] T084 [P] Create GitHub App permissions validation utility in `supabase/functions/_shared/github-app.ts` (validates installation has required permissions)
+- [ ] T085 [P] Create test for GitHub App permissions validation in `supabase/tests/functions/_shared/github-app.test.ts` (validates permission checks)
+- [ ] T086 Add coverage validation gate task before Phase 3 completion (verify ≥80% coverage for Phase 2 foundational code)
+- [ ] T087 Add coverage validation gate task before Phase 4 completion (verify ≥80% coverage for Phase 3 User Story 1 code)
+- [ ] T088 Add coverage validation gate task before Phase 5 completion (verify ≥80% coverage for Phase 4 User Story 2 code)
 
 ## Phase 3: User Story 1 - Install FaaSr and Authenticate
 
@@ -110,8 +118,8 @@ Phase 5 (Polish)
 - [ ] T030 [US1] Create InstallPage component in `frontend/src/pages/InstallPage.tsx` (installation flow page with status messages)
 - [ ] T031 [US1] Create HomePage component in `frontend/src/pages/HomePage.tsx` (landing page with Install FaaSr button)
 - [ ] T032 [US1] Create useAuth hook in `frontend/src/hooks/useAuth.ts` (authentication state management, session handling)
-- [ ] T033 [US1] Implement auth Edge Function install endpoint in `supabase/functions/auth/index.ts` (GET /auth/install - redirects to GitHub App installation)
-- [ ] T034 [US1] Implement auth Edge Function callback endpoint in `supabase/functions/auth/index.ts` (GET /auth/callback - handles installation callback, creates session)
+- [ ] T033 [US1] Implement auth Edge Function install endpoint in `supabase/functions/auth/index.ts` (GET /auth/install - redirects to GitHub App installation, validates required permissions per FR-004)
+- [ ] T034 [US1] Implement auth Edge Function callback endpoint in `supabase/functions/auth/index.ts` (GET /auth/callback - handles installation callback, validates permissions, creates session)
 - [ ] T035 [US1] Implement session creation in auth callback (stores installation ID, user info in JWT token, sets HTTP-only cookie)
 - [ ] T036 [US1] Implement fork detection logic in `supabase/functions/_shared/repository.ts` (checks if fork exists before creating)
 - [ ] T037 [US1] Implement fork creation logic in `supabase/functions/_shared/repository.ts` (creates fork using GitHub API)
@@ -150,13 +158,13 @@ Phase 5 (Polish)
 - [ ] T056 [US2] Implement workflow upload Edge Function in `supabase/functions/workflows/index.ts` (POST /workflows/upload - handles file upload, validation, commit, workflow trigger)
 - [ ] T057 [US2] Implement workflow status Edge Function in `supabase/functions/workflows/index.ts` (GET /workflows/status/{fileName} - returns workflow registration status)
 - [ ] T058 [US2] Implement FormData parsing in workflow upload Edge Function (parses multipart/form-data, extracts file)
-- [ ] T059 [US2] Implement JSON file validation in `supabase/functions/_shared/workflow.ts` (validates JSON syntax, file name format, file size)
+- [ ] T059 [US2] Implement JSON file validation in `supabase/functions/_shared/workflow.ts` (validates JSON structure/syntax only, file name format, file size. Returns user-friendly "Invalid JSON" error message for malformed JSON)
 - [ ] T060 [US2] Implement file commit to GitHub in `supabase/functions/_shared/workflow.ts` (commits file to user's fork using GitHub API)
 - [ ] T061 [US2] Implement workflow dispatch trigger in `supabase/functions/_shared/workflow.ts` (triggers FaaSr Register workflow with workflow file name parameter)
 - [ ] T062 [US2] Implement workflow status retrieval in `supabase/functions/_shared/workflow.ts` (queries GitHub Actions API for workflow run status)
 - [ ] T063 [US2] Add upload endpoint to frontend API client in `frontend/src/services/api.ts` (POST /workflows/upload with FormData)
 - [ ] T064 [US2] Add status endpoint to frontend API client in `frontend/src/services/api.ts` (GET /workflows/status/{fileName})
-- [ ] T065 [US2] Implement client-side JSON validation in FileUpload component (validates JSON before upload)
+- [ ] T065 [US2] Implement client-side JSON validation in FileUpload component (validates JSON structure/syntax before upload, displays "Invalid JSON" error message)
 - [ ] T066 [US2] Implement upload progress indicator in FileUpload component (shows upload status, success/error messages)
 - [ ] T067 [US2] Integrate StatusNotification component in UploadPage (displays upload and registration status)
 - [ ] T068 [US2] Add UploadPage route to React Router in `frontend/src/App.tsx` (route for /upload)
@@ -181,11 +189,29 @@ Phase 5 (Polish)
 
 - [ ] T076 Add comprehensive error messages for all error scenarios (rate limits, permissions, network failures)
 - [ ] T077 Add loading states to all async operations in frontend components
-- [ ] T078 Add JSDoc comments to all React components and Edge Functions
+- [ ] T078 Add JSDoc comments to all public APIs, classes, functions, and modules (React components, Edge Functions, shared utilities) per Constitution Principle II
 - [ ] T079 Update README.md with complete setup instructions and deployment guide
 - [ ] T080 Add environment variable validation on application startup (frontend and backend)
 
 ## Parallel Execution Examples
+
+### Phase 2 Foundational Parallel Opportunities
+
+The following tasks can be executed in parallel during Phase 2 implementation:
+
+**Coverage & Testing Infrastructure (can work in parallel)**:
+
+- T081, T082 (Jest and Deno coverage configuration)
+- T086, T087, T088 (Coverage validation gates - sequential but can be prepared in parallel)
+
+**GitHub App Permissions (can work in parallel)**:
+
+- T083, T084, T085 (Permissions documentation, validation utility, and test)
+
+**Shared Utilities (can work in parallel)**:
+
+- T011, T012, T013, T014, T015 (All shared utility modules)
+- T016, T017 (Frontend types and API client)
 
 ### User Story 1 Parallel Opportunities
 

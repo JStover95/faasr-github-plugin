@@ -15,7 +15,7 @@
 - `userLogin` (string, required): GitHub username/login
 - `userId` (number, required): GitHub user ID
 - `avatarUrl` (string, optional): User's GitHub avatar URL
-- `sessionToken` (string, required): Session identifier (managed by express-session)
+- `jwtToken` (string, required): JWT session token (stored in HTTP-only cookie)
 - `createdAt` (timestamp, required): Session creation time
 - `expiresAt` (timestamp, required): Session expiration time
 
@@ -27,9 +27,9 @@
 
 - `installationId` must be a valid GitHub installation ID (numeric string)
 - `userLogin` must match GitHub username format (alphanumeric, hyphens, no spaces)
-- Session expires after configured timeout (default: 24 hours for PoC)
+- For PoC: Sessions are managed in-memory and automatically expire on page reload (no persistent storage)
 
-**Storage**: Session storage (express-session in-memory store)
+**Storage**: JWT token stored in HTTP-only cookie (client-side), session data in-memory (Supabase Edge Function runtime)
 
 ---
 
@@ -112,7 +112,7 @@
 - Belongs to: User Session (uploaded by authenticated user)
 - Committed to: Repository Fork (committed to user's fork)
 
-**Storage**: Temporary file storage (multer) before commit, then stored in GitHub repository
+**Storage**: File content parsed from FormData in Supabase Edge Function (no temporary storage), immediately committed to GitHub repository
 
 ---
 

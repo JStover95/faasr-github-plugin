@@ -44,12 +44,12 @@ A user who has already installed FaaSr wants to register a workflow they created
 ### Edge Cases
 
 - What happens when a user already has a fork of the FaaSr-workflow repository? (System should detect existing fork and use it instead of creating a duplicate)
-- How does the system handle authentication failures or expired GitHub tokens? (For PoC, user must re-authenticate with GitHub. State does not persist between sessions)
-- What happens when a user uploads an invalid or malformed workflow JSON file? (Malformed JSON will cause the FaaSr Register workflow to fail. For PoC, handle this case the same as any other workflow failure state - user receives notification of the failure)
+- How does the system handle authentication failures or expired GitHub tokens? (For PoC, user sessions are managed in-memory and automatically expire on page reload. User must re-authenticate with GitHub. State does not persist between sessions)
+- What happens when a user uploads an invalid or malformed workflow JSON file? (System validates JSON structure only (syntax validation). If JSON is invalid, user receives an error message stating "Invalid JSON" before the file is committed. Malformed JSON that passes syntax validation will cause the FaaSr Register workflow to fail, and user receives notification of the failure)
 - How does the system handle network failures during repository forking? (For PoC, system notifies user of the failure. User can retry the operation)
 - What happens when the FaaSr Register workflow fails after being triggered? (User should receive notification of the failure with access to error logs)
 - How does the system handle concurrent uploads from the same user? (Out of scope for PoC. System assumes one upload at a time per user)
-- What happens when a user's GitHub account lacks permissions to create repositories? (System should detect this and provide clear guidance on required permissions)
+- What happens when a user's GitHub account lacks permissions to create repositories? (System should detect this and provide clear error message: "Your GitHub account lacks the required permissions. Please ensure you have permission to create repositories and manage workflows.")
 
 ## Requirements *(mandatory)*
 
