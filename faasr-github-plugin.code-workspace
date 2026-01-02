@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "frontend",
+			"path": "frontend"
+		},
+		{
+			"name": "supabase",
+			"path": "supabase"
+		}
+	],
+	"settings": {
+		"jest.disabledWorkspaceFolders": [
+			"faasr-github-plugin",
+			"supabase"
+		]
+	}
+}
