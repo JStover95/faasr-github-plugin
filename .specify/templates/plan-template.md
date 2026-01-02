@@ -23,15 +23,23 @@
 **Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
 **Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
 **Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Performance Goals**: OUT OF SCOPE (per Constitution Principle V - PoC focus)  
+**Constraints**: [domain-specific, e.g., <100MB memory, offline-capable or NEEDS CLARIFICATION]  
 **Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify compliance with FaaSr GitHub App Constitution principles:
+
+- **I. Modularity & Separation of Concerns**: Proposed structure maintains clear module boundaries? Dependencies minimized?
+- **II. Documentation Requirements**: Documentation plan defined for public APIs and complex logic?
+- **III. Unit Testing**: Unit testing strategy defined? Target ≥80% coverage achievable?
+- **IV. Design Pattern Adherence**: Existing design patterns from design-docs/ identified? New patterns documented?
+- **V. PoC Scope**: No performance optimization planned unless required for basic functionality?
+
+**Violations**: Document any necessary violations in Complexity Tracking section below.
 
 ## Project Structure
 
@@ -99,6 +107,6 @@ directories captured above]
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+| --------- | ---------- | ------------------------------------- |
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
