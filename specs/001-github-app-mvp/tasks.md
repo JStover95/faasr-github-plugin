@@ -53,16 +53,16 @@ Phase 5 (Polish)
 
 **Implementation:**
 
-- [ ] T001 Create Supabase project structure in `supabase/functions/`
-- [ ] T002 Create Supabase Edge Function directories: `supabase/functions/auth/`, `supabase/functions/workflows/`, `supabase/functions/health/`
-- [ ] T003 Create shared utilities directory: `supabase/functions/_shared/`
-- [ ] T004 Create frontend project structure in `frontend/` with React + TypeScript setup
-- [ ] T005 Initialize frontend package.json with dependencies: React 19.x, TypeScript 5.x, React Router, React Testing Library, Jest
-- [ ] T006 Create frontend source directories: `frontend/src/components/`, `frontend/src/pages/`, `frontend/src/services/`, `frontend/src/hooks/`, `frontend/src/types/`
-- [ ] T007 Create frontend test directory: `frontend/tests/unit/`
-- [ ] T008 Create Supabase config file: `supabase/config.toml`
-- [ ] T009 Create frontend `.env.example` file with placeholder environment variables
-- [ ] T010 Create project README.md with setup instructions
+- [X] T001 Create Supabase project structure in `supabase/functions/`
+- [X] T002 Create Supabase Edge Function directories: `supabase/functions/auth/`, `supabase/functions/workflows/`, `supabase/functions/health/`
+- [X] T003 Create shared utilities directory: `supabase/functions/_shared/`
+- [X] T004 Create frontend project structure in `frontend/` with React + TypeScript setup
+- [X] T005 Initialize frontend package.json with dependencies: React 19.x, TypeScript 5.x, React Router, React Testing Library, Jest
+- [X] T006 Create frontend source directories: `frontend/src/components/`, `frontend/src/pages/`, `frontend/src/services/`, `frontend/src/hooks/`, `frontend/src/types/`
+- [X] T007 Create frontend test directory: `frontend/tests/unit/`
+- [X] T008 Create Supabase config file: `supabase/config.toml`
+- [X] T009 Create frontend `.env.example` file with placeholder environment variables
+- [X] T010 Create project README.md with setup instructions
 
 ## Phase 2: Foundational
 
