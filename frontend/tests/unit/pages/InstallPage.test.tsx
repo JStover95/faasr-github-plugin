@@ -3,7 +3,7 @@
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { createRoutesStub } from "react-router";
 import { InstallPage } from "../../../src/pages/InstallPage";
 import { authApi } from "../../../src/services/api";
 import { useAuth } from "../../../src/hooks/useAuth";
@@ -37,11 +37,13 @@ describe("InstallPage", () => {
   });
 
   const renderWithRouter = () => {
-    return render(
-      <BrowserRouter>
-        <InstallPage />
-      </BrowserRouter>
-    );
+    const Stub = createRoutesStub([
+      {
+        path: "/install",
+        Component: InstallPage,
+      },
+    ]);
+    return render(<Stub initialEntries={["/install"]} />);
   };
 
   it("displays installation processing message", async () => {
@@ -74,8 +76,17 @@ describe("InstallPage", () => {
     resolveCallback!({
       success: true,
       message: "Installation successful",
-      user: { login: "testuser", id: 1, avatarUrl: "https://example.com/avatar.png" },
-      fork: { owner: "testuser", repoName: "FaaSr-workflow", url: "https://github.com/testuser/FaaSr-workflow", status: "created" },
+      user: {
+        login: "testuser",
+        id: 1,
+        avatarUrl: "https://example.com/avatar.png",
+      },
+      fork: {
+        owner: "testuser",
+        repoName: "FaaSr-workflow",
+        url: "https://github.com/testuser/FaaSr-workflow",
+        status: "created",
+      },
     });
 
     (window as any).location = originalURL;
@@ -102,8 +113,17 @@ describe("InstallPage", () => {
     (authApi.callback as jest.Mock).mockResolvedValue({
       success: true,
       message: "Installation successful",
-      user: { login: "testuser", id: 1, avatarUrl: "https://example.com/avatar.png" },
-      fork: { owner: "testuser", repoName: "FaaSr-workflow", url: "https://github.com/testuser/FaaSr-workflow", status: "created" },
+      user: {
+        login: "testuser",
+        id: 1,
+        avatarUrl: "https://example.com/avatar.png",
+      },
+      fork: {
+        owner: "testuser",
+        repoName: "FaaSr-workflow",
+        url: "https://github.com/testuser/FaaSr-workflow",
+        status: "created",
+      },
     });
 
     const originalURL = window.location;
@@ -142,4 +162,3 @@ describe("InstallPage", () => {
     (window as any).location = originalURL;
   });
 });
-
