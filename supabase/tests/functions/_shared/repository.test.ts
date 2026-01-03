@@ -9,7 +9,7 @@ import {
   ensureForkExists,
   pollUntilForkReady,
 } from "../../../functions/_shared/repository.ts";
-import { createMockOctokit, createTimerMock } from "./test-utils.ts";
+import { createMockOctokit } from "./test-utils.ts";
 
 Deno.test("checkForkExists returns fork info when fork exists", async () => {
   const { octokit } = createMockOctokit({
@@ -99,15 +99,10 @@ Deno.test("createFork creates fork successfully", async () => {
     },
   });
 
-  const timer = createTimerMock();
-  try {
-    const fork = await createFork(octokit, "testuser");
-    assertEquals(fork.owner, "testuser");
-    assertEquals(fork.repoName, "FaaSr-workflow");
-    assertEquals(fork.forkStatus, "created");
-  } finally {
-    timer.restore();
-  }
+  const fork = await createFork(octokit, "testuser");
+  assertEquals(fork.owner, "testuser");
+  assertEquals(fork.repoName, "FaaSr-workflow");
+  assertEquals(fork.forkStatus, "created");
 });
 
 Deno.test("ensureForkExists returns existing fork if it exists", async () => {
@@ -181,14 +176,9 @@ Deno.test("ensureForkExists creates fork if it does not exist", async () => {
     },
   });
 
-  const timer = createTimerMock();
-  try {
-    const fork = await ensureForkExists(octokit, "newuser");
-    assertEquals(fork.owner, "newuser");
-    assertEquals(fork.repoName, "FaaSr-workflow");
-  } finally {
-    timer.restore();
-  }
+  const fork = await ensureForkExists(octokit, "newuser");
+  assertEquals(fork.owner, "newuser");
+  assertEquals(fork.repoName, "FaaSr-workflow");
 });
 
 // ============================================================================
@@ -244,19 +234,9 @@ Deno.test("pollUntilForkReady - success after multiple attempts", async () => {
     },
   });
 
-  const timer = createTimerMock();
-  try {
-    const forkPromise = pollUntilForkReady(octokit, "testuser", 5, 100);
-    
-    // Advance time to allow polling
-    await timer.advance(300);
-    
-    const fork = await forkPromise;
-    assertEquals(fork.owner, "testuser");
-    assertEquals(attemptCount, 3);
-  } finally {
-    timer.restore();
-  }
+  const fork = await pollUntilForkReady(octokit, "testuser", 5, 1);
+  assertEquals(fork.owner, "testuser");
+  assertEquals(attemptCount, 3);
 });
 
 Deno.test("pollUntilForkReady - timeout after max attempts", async () => {
@@ -268,20 +248,13 @@ Deno.test("pollUntilForkReady - timeout after max attempts", async () => {
     },
   });
 
-  const timer = createTimerMock();
-  try {
-    await assertRejects(
-      async () => {
-        const forkPromise = pollUntilForkReady(octokit, "testuser", 3, 100);
-        await timer.advance(500);
-        await forkPromise;
-      },
-      Error,
-      "is not ready after 3 attempts"
-    );
-  } finally {
-    timer.restore();
-  }
+  await assertRejects(
+    async () => {
+      await pollUntilForkReady(octokit, "testuser", 3, 1);
+    },
+    Error,
+    "is not ready after 3 attempts"
+  );
 });
 
 // ============================================================================
