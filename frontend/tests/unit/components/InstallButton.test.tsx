@@ -109,4 +109,32 @@ describe("InstallButton", () => {
 
     expect(authApi.install).not.toHaveBeenCalled();
   });
+
+  it("does not call install when already loading", async () => {
+    const user = userEvent.setup();
+
+    // Create a promise that we can control
+    let resolveInstall: () => void;
+    const installPromise = new Promise<void>((resolve) => {
+      resolveInstall = resolve;
+    });
+
+    (authApi.install as jest.Mock).mockReturnValue(installPromise);
+
+    render(<InstallButton />);
+
+    const button = screen.getByRole("button");
+
+    // First click - should trigger install
+    await user.click(button);
+    expect(authApi.install).toHaveBeenCalledTimes(1);
+
+    // Second click while loading - should not trigger another install
+    await user.click(button);
+    expect(authApi.install).toHaveBeenCalledTimes(1);
+
+    // Resolve the promise to clean up
+    resolveInstall!();
+    await installPromise;
+  });
 });
