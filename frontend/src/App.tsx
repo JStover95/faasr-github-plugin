@@ -4,27 +4,14 @@
  * Configures routing for the FaaSr GitHub App MVP application.
  */
 
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Layout } from "./components/Layout";
-import { HomePage } from "./pages/HomePage";
-import { InstallPage } from "./pages/InstallPage";
+import { RouterProvider } from "react-router-dom";
+import { router } from "./router";
 
 /**
  * App component
  */
-export const App: React.FC = () => {
-  return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/install" element={<InstallPage />} />
-          {/* UploadPage will be added in Phase 4 */}
-        </Routes>
-      </Layout>
-    </BrowserRouter>
-  );
+export const App = () => {
+  return <RouterProvider router={router} />;
 };
 
 export default App;
