@@ -16,13 +16,7 @@ import type {
   ErrorResponse,
   HealthResponse,
 } from "../types";
-
-/**
- * Base URL for API endpoints
- * In production, this should be set via environment variable
- */
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:54321/functions/v1";
+import { API_BASE_URL } from "../constants";
 
 /**
  * Default fetch options with credentials for cookie handling
@@ -68,6 +62,8 @@ export const authApi = {
       const location = response.headers.get("Location");
       if (location) {
         window.location.href = location;
+      } else {
+        throw new Error("Failed to initiate installation");
       }
     } else {
       throw new Error("Failed to initiate installation");
