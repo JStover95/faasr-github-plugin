@@ -63,7 +63,13 @@ export async function checkForkExists(
         return null;
       }
     }
-    throw error;
+    // Wrap non-Error objects in an Error
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(
+      `Failed to check fork existence: ${JSON.stringify(error)}`
+    );
   }
 }
 
@@ -148,7 +154,13 @@ export async function createFork(
         }
       }
     }
-    throw error;
+    // Wrap non-Error objects in an Error
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(
+      `Failed to create fork: ${JSON.stringify(error)}`
+    );
   }
 }
 
