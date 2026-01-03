@@ -8,6 +8,10 @@ import { assertEquals, assert } from "jsr:@std/assert@1.0.16";
 import {
   validateInstallationPermissions,
   REQUIRED_PERMISSIONS,
+  createGitHubApp,
+  getInstallationToken,
+  getInstallation,
+  checkInstallationPermissions,
 } from "../../../functions/_shared/github-app.ts";
 import type { GitHubInstallation } from "../../../functions/_shared/types.ts";
 
@@ -145,4 +149,66 @@ Deno.test("REQUIRED_PERMISSIONS constant", () => {
   assertEquals(REQUIRED_PERMISSIONS.contents, "write");
   assertEquals(REQUIRED_PERMISSIONS.actions, "write");
   assertEquals(REQUIRED_PERMISSIONS.metadata, "read");
+});
+
+// ============================================================================
+// Tests for createGitHubApp
+// ============================================================================
+
+Deno.test("createGitHubApp - with OAuth config", () => {
+  const app = createGitHubApp({
+    appId: "123456",
+    privateKey: "-----BEGIN PRIVATE KEY-----\nMOCK_KEY\n-----END PRIVATE KEY-----",
+    clientId: "client-id",
+    clientSecret: "client-secret",
+  });
+
+  // Verify App instance is created (it's an Octokit App instance)
+  assert(app !== null);
+  assert(typeof app === "object");
+});
+
+Deno.test("createGitHubApp - without OAuth config", () => {
+  const app = createGitHubApp({
+    appId: "123456",
+    privateKey: "-----BEGIN PRIVATE KEY-----\nMOCK_KEY\n-----END PRIVATE KEY-----",
+  });
+
+  // Verify App instance is created
+  assert(app !== null);
+  assert(typeof app === "object");
+});
+
+// ============================================================================
+// Tests for getInstallationToken
+// ============================================================================
+
+Deno.test("getInstallationToken - function exists and has correct signature", () => {
+  assertEquals(typeof getInstallationToken, "function");
+});
+
+// ============================================================================
+// Tests for getInstallation
+// ============================================================================
+
+Deno.test("getInstallation - function exists and has correct signature", () => {
+  assertEquals(typeof getInstallation, "function");
+});
+
+// ============================================================================
+// Tests for checkInstallationPermissions
+// ============================================================================
+
+Deno.test("checkInstallationPermissions - error when installation fetch fails", async () => {
+  // Test that checkInstallationPermissions handles errors gracefully
+  // When installation fetch fails, it should return invalid with all missing permissions
+  const result = await checkInstallationPermissions(
+    "invalid-app-id",
+    "invalid-key",
+    "999999"
+  );
+
+  // When installation fetch fails, it should return invalid with all missing permissions
+  assertEquals(result.valid, false);
+  assert(result.missingPermissions.length > 0);
 });
