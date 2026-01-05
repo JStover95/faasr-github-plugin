@@ -130,7 +130,17 @@ export function createValidationErrorResponse(
  * @returns HTTP Response for not found errors
  */
 export function createNotFoundErrorResponse(error: string): Response {
-  return createErrorResponse(new Error(error), 404, error);
+  // Use the error message directly without formatting
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error,
+    }),
+    {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
+  );
 }
 
 /**
@@ -140,6 +150,16 @@ export function createNotFoundErrorResponse(error: string): Response {
  * @returns HTTP Response for configuration errors
  */
 export function createConfigurationErrorResponse(error: string): Response {
-  return createErrorResponse(new Error(error), 500, error);
+  // Use the error message directly without formatting
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error,
+    }),
+    {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
+  );
 }
 
