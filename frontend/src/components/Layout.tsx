@@ -6,6 +6,7 @@
  */
 
 import type { PropsWithChildren } from "react";
+import { LayoutIds } from "./Layout.ids";
 
 /**
  * Layout component
@@ -13,15 +14,26 @@ import type { PropsWithChildren } from "react";
 export const Layout = ({ children }: PropsWithChildren) => {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-gray-800 text-white p-4">
+      <header
+        className="bg-gray-800 text-white p-4"
+        data-testid={LayoutIds.header}
+      >
         <div className="container mx-auto">
           <h1 className="text-2xl font-bold">FaaSr GitHub App</h1>
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto p-4">{children}</main>
+      <main
+        className="flex-grow container mx-auto p-4"
+        data-testid={LayoutIds.main}
+      >
+        {children}
+      </main>
 
-      <footer className="bg-gray-100 p-4 mt-auto">
+      <footer
+        className="bg-gray-100 p-4 mt-auto"
+        data-testid={LayoutIds.footer}
+      >
         <div className="container mx-auto text-center text-gray-600">
           <p>&copy; 2025 FaaSr. All rights reserved.</p>
         </div>

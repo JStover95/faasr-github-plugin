@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { authApi } from "../services/api";
+import { InstallButtonIds } from "./InstallButton.ids";
 
 interface InstallButtonProps {
   /** Callback when installation is initiated */
@@ -58,6 +59,7 @@ export const InstallButton = ({
       disabled={disabled || isLoading}
       className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${className}`}
       type="button"
+      data-testid={InstallButtonIds.button}
     >
       {isLoading ? "Redirecting..." : label}
     </button>

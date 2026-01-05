@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { StatusNotificationIds } from "./StatusNotification.ids";
 
 export type NotificationType = "success" | "error" | "info" | "warning";
 
@@ -75,20 +76,31 @@ export const StatusNotification = ({
     <div
       className={`border rounded-lg p-4 ${typeStyles[type]} ${className}`}
       role="alert"
+      data-testid={StatusNotificationIds.notification}
     >
       <div className="flex items-start">
         <div className="flex-shrink-0">
           <span className="text-lg font-bold">{iconStyles[type]}</span>
         </div>
         <div className="ml-3 flex-1">
-          {title && <h3 className="text-sm font-semibold mb-1">{title}</h3>}
-          <p className="text-sm">{message}</p>
+          {title && (
+            <h3
+              className="text-sm font-semibold mb-1"
+              data-testid={StatusNotificationIds.title}
+            >
+              {title}
+            </h3>
+          )}
+          <p className="text-sm" data-testid={StatusNotificationIds.message}>
+            {message}
+          </p>
         </div>
         {onDismiss && (
           <button
             onClick={handleDismiss}
             className="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-600"
             aria-label="Dismiss notification"
+            data-testid={StatusNotificationIds.dismissButton}
           >
             <span className="text-xl">×</span>
           </button>

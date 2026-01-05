@@ -6,6 +6,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FileUpload } from "../../../src/components/FileUpload";
 import { workflowsApi } from "../../../src/services/api";
+import { FileUploadIds } from "../../../src/components/FileUpload.ids";
 
 // Mock the API
 jest.mock("../../../src/services/api", () => ({
@@ -22,13 +23,15 @@ describe("FileUpload", () => {
   it("renders file upload interface", () => {
     render(<FileUpload />);
     expect(screen.getByText(/select workflow json file/i)).toBeInTheDocument();
-    expect(screen.getByText(/choose file/i)).toBeInTheDocument();
-    expect(screen.getByText(/upload workflow/i)).toBeInTheDocument();
+    expect(
+      screen.getByTestId(FileUploadIds.chooseFileButton)
+    ).toBeInTheDocument();
+    expect(screen.getByTestId(FileUploadIds.uploadButton)).toBeInTheDocument();
   });
 
   it("disables upload button when no file is selected", () => {
     render(<FileUpload />);
-    const uploadButton = screen.getByText(/upload workflow/i);
+    const uploadButton = screen.getByTestId(FileUploadIds.uploadButton);
     expect(uploadButton).toBeDisabled();
   });
 
@@ -39,17 +42,19 @@ describe("FileUpload", () => {
       type: "application/json",
     });
 
-    const { container } = render(<FileUpload onFileSelect={onFileSelect} />);
+    render(<FileUpload onFileSelect={onFileSelect} />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
     await user.upload(fileInput, file);
 
     await waitFor(() => {
-      expect(screen.getByText("test-workflow.json")).toBeInTheDocument();
+      expect(
+        screen.getByTestId(FileUploadIds.selectedFileName)
+      ).toHaveTextContent("test-workflow.json");
     });
 
     expect(onFileSelect).toHaveBeenCalledWith(file);
@@ -61,17 +66,19 @@ describe("FileUpload", () => {
       type: "application/json",
     });
 
-    const { container } = render(<FileUpload />);
+    render(<FileUpload />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
     await user.upload(fileInput, invalidJsonFile);
 
     await waitFor(() => {
-      expect(screen.getByText(/invalid json/i)).toBeInTheDocument();
+      expect(
+        screen.getByTestId(FileUploadIds.validationError)
+      ).toHaveTextContent(/invalid json/i);
     });
   });
 
@@ -81,10 +88,10 @@ describe("FileUpload", () => {
       type: "application/json",
     });
 
-    const { container } = render(<FileUpload />);
+    render(<FileUpload />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
@@ -92,8 +99,8 @@ describe("FileUpload", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/file name must contain only letters/i)
-      ).toBeInTheDocument();
+        screen.getByTestId(FileUploadIds.validationError)
+      ).toHaveTextContent(/file name must contain only letters/i);
     });
   });
 
@@ -102,10 +109,10 @@ describe("FileUpload", () => {
       type: "text/plain",
     });
 
-    const { container } = render(<FileUpload />);
+    render(<FileUpload />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
@@ -120,8 +127,8 @@ describe("FileUpload", () => {
     await waitFor(
       () => {
         expect(
-          screen.getByText(/File must have .json extension/i)
-        ).toBeInTheDocument();
+          screen.getByTestId(FileUploadIds.validationError)
+        ).toHaveTextContent(/File must have .json extension/i);
       },
       { timeout: 3000 }
     );
@@ -135,10 +142,10 @@ describe("FileUpload", () => {
       type: "application/json",
     });
 
-    const { container } = render(<FileUpload />);
+    render(<FileUpload />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
@@ -146,8 +153,8 @@ describe("FileUpload", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/file size exceeds maximum/i)
-      ).toBeInTheDocument();
+        screen.getByTestId(FileUploadIds.validationError)
+      ).toHaveTextContent(/file size exceeds maximum/i);
     });
   });
 
@@ -166,20 +173,22 @@ describe("FileUpload", () => {
 
     (workflowsApi.upload as jest.Mock).mockResolvedValue(mockResponse);
 
-    const { container } = render(<FileUpload />);
+    render(<FileUpload />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
     await user.upload(fileInput, file);
 
     await waitFor(() => {
-      expect(screen.getByText("test-workflow.json")).toBeInTheDocument();
+      expect(
+        screen.getByTestId(FileUploadIds.selectedFileName)
+      ).toHaveTextContent("test-workflow.json");
     });
 
-    const uploadButton = screen.getByText(/upload workflow/i);
+    const uploadButton = screen.getByTestId(FileUploadIds.uploadButton);
     await user.click(uploadButton);
 
     await waitFor(() => {
@@ -203,22 +212,22 @@ describe("FileUpload", () => {
 
     (workflowsApi.upload as jest.Mock).mockResolvedValue(mockResponse);
 
-    const { container } = render(
-      <FileUpload onUploadSuccess={onUploadSuccess} />
-    );
+    render(<FileUpload onUploadSuccess={onUploadSuccess} />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
     await user.upload(fileInput, file);
 
     await waitFor(() => {
-      expect(screen.getByText("test-workflow.json")).toBeInTheDocument();
+      expect(
+        screen.getByTestId(FileUploadIds.selectedFileName)
+      ).toHaveTextContent("test-workflow.json");
     });
 
-    const uploadButton = screen.getByText(/upload workflow/i);
+    const uploadButton = screen.getByTestId(FileUploadIds.uploadButton);
     await user.click(uploadButton);
 
     await waitFor(() => {
@@ -236,20 +245,22 @@ describe("FileUpload", () => {
     const error = new Error("Upload failed");
     (workflowsApi.upload as jest.Mock).mockRejectedValue(error);
 
-    const { container } = render(<FileUpload onUploadError={onUploadError} />);
+    render(<FileUpload onUploadError={onUploadError} />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
     await user.upload(fileInput, file);
 
     await waitFor(() => {
-      expect(screen.getByText("test-workflow.json")).toBeInTheDocument();
+      expect(
+        screen.getByTestId(FileUploadIds.selectedFileName)
+      ).toHaveTextContent("test-workflow.json");
     });
 
-    const uploadButton = screen.getByText(/upload workflow/i);
+    const uploadButton = screen.getByTestId(FileUploadIds.uploadButton);
     await user.click(uploadButton);
 
     await waitFor(() => {
@@ -267,35 +278,36 @@ describe("FileUpload", () => {
       () => new Promise((resolve) => setTimeout(resolve, 100))
     );
 
-    const { container } = render(<FileUpload />);
+    render(<FileUpload />);
 
-    const fileInput = container.querySelector(
-      'input[type="file"]'
+    const fileInput = screen.getByTestId(
+      FileUploadIds.fileInput
     ) as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
 
     await user.upload(fileInput, file);
 
     await waitFor(() => {
-      expect(screen.getByText("test-workflow.json")).toBeInTheDocument();
+      expect(
+        screen.getByTestId(FileUploadIds.selectedFileName)
+      ).toHaveTextContent("test-workflow.json");
     });
 
-    const uploadButton = screen.getByText(/upload workflow/i);
+    const uploadButton = screen.getByTestId(FileUploadIds.uploadButton);
     await user.click(uploadButton);
 
     // Check for the button text "Uploading..." specifically
     await waitFor(() => {
-      const uploadingButton = screen.getByRole("button", {
-        name: /uploading/i,
-      });
+      const uploadingButton = screen.getByTestId(FileUploadIds.uploadButton);
       expect(uploadingButton).toBeInTheDocument();
       expect(uploadingButton).toBeDisabled();
+      expect(uploadingButton).toHaveTextContent(/uploading/i);
     });
   });
 
   it("disables upload when disabled prop is true", () => {
     render(<FileUpload disabled={true} />);
-    const uploadButton = screen.getByText(/upload workflow/i);
+    const uploadButton = screen.getByTestId(FileUploadIds.uploadButton);
     expect(uploadButton).toBeDisabled();
   });
 });

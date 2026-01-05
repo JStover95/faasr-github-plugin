@@ -5,31 +5,52 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StatusNotification } from "../../../src/components/StatusNotification";
+import { StatusNotificationIds } from "../../../src/components/StatusNotification.ids";
 
 describe("StatusNotification", () => {
   it("renders success notification", () => {
     render(
       <StatusNotification type="success" message="Operation successful" />
     );
-    expect(screen.getByText("Operation successful")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.notification)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.message)
+    ).toHaveTextContent("Operation successful");
     expect(screen.getByText("✓")).toBeInTheDocument();
   });
 
   it("renders error notification", () => {
     render(<StatusNotification type="error" message="Operation failed" />);
-    expect(screen.getByText("Operation failed")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.notification)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.message)
+    ).toHaveTextContent("Operation failed");
     expect(screen.getByText("✕")).toBeInTheDocument();
   });
 
   it("renders info notification", () => {
     render(<StatusNotification type="info" message="Information message" />);
-    expect(screen.getByText("Information message")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.notification)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.message)
+    ).toHaveTextContent("Information message");
     expect(screen.getByText("ℹ")).toBeInTheDocument();
   });
 
   it("renders warning notification", () => {
     render(<StatusNotification type="warning" message="Warning message" />);
-    expect(screen.getByText("Warning message")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.notification)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.message)
+    ).toHaveTextContent("Warning message");
     expect(screen.getByText("⚠")).toBeInTheDocument();
   });
 
@@ -41,8 +62,12 @@ describe("StatusNotification", () => {
         message="Operation successful"
       />
     );
-    expect(screen.getByText("Success Title")).toBeInTheDocument();
-    expect(screen.getByText("Operation successful")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.title)
+    ).toHaveTextContent("Success Title");
+    expect(
+      screen.getByTestId(StatusNotificationIds.message)
+    ).toHaveTextContent("Operation successful");
   });
 
   it("calls onDismiss when dismiss button is clicked", async () => {
@@ -57,11 +82,15 @@ describe("StatusNotification", () => {
       />
     );
 
-    const dismissButton = screen.getByLabelText("Dismiss notification");
+    const dismissButton = screen.getByTestId(
+      StatusNotificationIds.dismissButton
+    );
     await user.click(dismissButton);
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("Operation successful")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId(StatusNotificationIds.notification)
+    ).not.toBeInTheDocument();
   });
 
   it("does not show dismiss button when onDismiss is not provided", () => {
@@ -69,7 +98,7 @@ describe("StatusNotification", () => {
       <StatusNotification type="success" message="Operation successful" />
     );
     expect(
-      screen.queryByLabelText("Dismiss notification")
+      screen.queryByTestId(StatusNotificationIds.dismissButton)
     ).not.toBeInTheDocument();
   });
 
@@ -86,14 +115,16 @@ describe("StatusNotification", () => {
       />
     );
 
-    expect(screen.getByText("Operation successful")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.notification)
+    ).toBeInTheDocument();
 
     jest.advanceTimersByTime(1000);
 
     await waitFor(() => {
       expect(onDismiss).toHaveBeenCalledTimes(1);
       expect(
-        screen.queryByText("Operation successful")
+        screen.queryByTestId(StatusNotificationIds.notification)
       ).not.toBeInTheDocument();
     });
 
@@ -115,7 +146,9 @@ describe("StatusNotification", () => {
 
     jest.advanceTimersByTime(5000);
 
-    expect(screen.getByText("Operation successful")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(StatusNotificationIds.notification)
+    ).toBeInTheDocument();
     expect(onDismiss).not.toHaveBeenCalled();
 
     jest.useRealTimers();
@@ -134,6 +167,10 @@ describe("StatusNotification", () => {
       />
     );
 
+    expect(
+      screen.getByTestId(StatusNotificationIds.notification)
+    ).toBeInTheDocument();
+
     unmount();
 
     jest.advanceTimersByTime(1000);
@@ -144,7 +181,7 @@ describe("StatusNotification", () => {
   });
 
   it("applies custom className", () => {
-    const { container } = render(
+    render(
       <StatusNotification
         type="success"
         message="Operation successful"
@@ -152,7 +189,7 @@ describe("StatusNotification", () => {
       />
     );
 
-    const notification = container.querySelector(".custom-class");
-    expect(notification).toBeInTheDocument();
+    const notification = screen.getByTestId(StatusNotificationIds.notification);
+    expect(notification).toHaveClass("custom-class");
   });
 });

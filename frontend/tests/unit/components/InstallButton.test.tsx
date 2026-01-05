@@ -6,6 +6,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { InstallButton } from "../../../src/components/InstallButton";
 import { authApi } from "../../../src/services/api";
+import { InstallButtonIds } from "../../../src/components/InstallButton.ids";
 
 // Mock the API
 jest.mock("../../../src/services/api", () => ({
@@ -21,16 +22,18 @@ describe("InstallButton", () => {
 
   it("renders button with default label", () => {
     render(<InstallButton />);
-    expect(
-      screen.getByRole("button", { name: /install faasr/i })
-    ).toBeInTheDocument();
+    expect(screen.getByTestId(InstallButtonIds.button)).toBeInTheDocument();
+    expect(screen.getByTestId(InstallButtonIds.button)).toHaveTextContent(
+      /install faasr/i
+    );
   });
 
   it("renders button with custom label", () => {
     render(<InstallButton label="Click to Install" />);
-    expect(
-      screen.getByRole("button", { name: /click to install/i })
-    ).toBeInTheDocument();
+    expect(screen.getByTestId(InstallButtonIds.button)).toBeInTheDocument();
+    expect(screen.getByTestId(InstallButtonIds.button)).toHaveTextContent(
+      /click to install/i
+    );
   });
 
   it("calls onInstallStart when clicked", async () => {
@@ -41,7 +44,7 @@ describe("InstallButton", () => {
 
     render(<InstallButton onInstallStart={onInstallStart} />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByTestId(InstallButtonIds.button);
     await user.click(button);
 
     expect(onInstallStart).toHaveBeenCalledTimes(1);
@@ -55,7 +58,7 @@ describe("InstallButton", () => {
 
     render(<InstallButton />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByTestId(InstallButtonIds.button);
     await user.click(button);
 
     expect(authApi.install).toHaveBeenCalledTimes(1);
@@ -70,7 +73,7 @@ describe("InstallButton", () => {
 
     render(<InstallButton onInstallError={onInstallError} />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByTestId(InstallButtonIds.button);
     await user.click(button);
 
     await waitFor(() => {
@@ -87,15 +90,17 @@ describe("InstallButton", () => {
 
     render(<InstallButton />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByTestId(InstallButtonIds.button);
     await user.click(button);
 
-    expect(screen.getByText(/redirecting/i)).toBeInTheDocument();
+    expect(screen.getByTestId(InstallButtonIds.button)).toHaveTextContent(
+      /redirecting/i
+    );
   });
 
   it("disables button when disabled prop is true", () => {
     render(<InstallButton disabled={true} />);
-    const button = screen.getByRole("button");
+    const button = screen.getByTestId(InstallButtonIds.button);
     expect(button).toBeDisabled();
   });
 
@@ -104,7 +109,7 @@ describe("InstallButton", () => {
 
     render(<InstallButton disabled={true} />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByTestId(InstallButtonIds.button);
     await user.click(button);
 
     expect(authApi.install).not.toHaveBeenCalled();
@@ -123,7 +128,7 @@ describe("InstallButton", () => {
 
     render(<InstallButton />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByTestId(InstallButtonIds.button);
 
     // First click - should trigger install
     await user.click(button);

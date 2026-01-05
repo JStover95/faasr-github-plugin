@@ -8,6 +8,7 @@
 import { useState, useRef, ChangeEvent } from "react";
 import { workflowsApi } from "../services/api";
 import type { UploadResponse } from "../types";
+import { FileUploadIds } from "./FileUpload.ids";
 
 export interface FileUploadProps {
   /** Callback when upload succeeds */
@@ -197,29 +198,42 @@ export const FileUpload = ({
             onChange={handleFileSelect}
             className="hidden"
             disabled={disabled || isUploading}
+            data-testid={FileUploadIds.fileInput}
           />
           <button
             type="button"
             onClick={handleFileInputClick}
             disabled={disabled || isUploading}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid={FileUploadIds.chooseFileButton}
           >
             Choose File
           </button>
           {selectedFile && (
-            <span className="text-sm text-gray-600">{selectedFile.name}</span>
+            <span
+              className="text-sm text-gray-600"
+              data-testid={FileUploadIds.selectedFileName}
+            >
+              {selectedFile.name}
+            </span>
           )}
         </div>
       </div>
 
       {validationError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-md text-sm">
+        <div
+          className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-md text-sm"
+          data-testid={FileUploadIds.validationError}
+        >
           {validationError}
         </div>
       )}
 
       {uploadProgress && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-md text-sm">
+        <div
+          className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-md text-sm"
+          data-testid={FileUploadIds.uploadProgress}
+        >
           {uploadProgress}
         </div>
       )}
@@ -229,6 +243,7 @@ export const FileUpload = ({
         onClick={handleUpload}
         disabled={!selectedFile || isUploading || disabled}
         className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        data-testid={FileUploadIds.uploadButton}
       >
         {isUploading ? "Uploading..." : "Upload Workflow"}
       </button>
