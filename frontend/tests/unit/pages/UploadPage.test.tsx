@@ -100,12 +100,16 @@ describe("UploadPage", () => {
 
     renderWithRouter();
 
-    expect(screen.getByText("Upload Workflow")).toBeInTheDocument();
+    // Check for the heading specifically (not the button)
+    expect(
+      screen.getByRole("heading", { name: "Upload Workflow" })
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         /Upload your workflow JSON file to register it with FaaSr/i
       )
     ).toBeInTheDocument();
+    expect(screen.getByText(/select workflow json file/i)).toBeInTheDocument();
   });
 
   it("does not redirect when loading", () => {
