@@ -86,9 +86,24 @@ export function sanitizeFileName(fileName: string): string {
   let sanitized = fileName.replace(/[/\\]/g, "");
   // Remove any remaining dangerous characters
   sanitized = sanitized.replace(/[^a-zA-Z0-9_.-]/g, "");
+  // Remove leading dots (filename must start with alphanumeric, underscore, or hyphen)
+  sanitized = sanitized.replace(/^\.+/, "");
+  // Collapse multiple consecutive dots in the middle (but preserve .json extension)
+  // Split by .json to handle the extension separately
+  if (sanitized.endsWith(".json")) {
+    const namePart = sanitized.slice(0, -5); // Remove ".json"
+    const sanitizedNamePart = namePart.replace(/\.{2,}/g, ".");
+    sanitized = sanitizedNamePart + ".json";
+  } else {
+    sanitized = sanitized.replace(/\.{2,}/g, ".");
+  }
   // Ensure it ends with .json
   if (!sanitized.endsWith(".json")) {
     sanitized = sanitized.replace(/\.json$/, "") + ".json";
+  }
+  // If after all sanitization we have an empty name or just ".json", use a default
+  if (!sanitized || sanitized === ".json") {
+    sanitized = "workflow.json";
   }
   return sanitized;
 }
