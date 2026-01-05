@@ -1,3 +1,5 @@
+// deno-coverage-ignore-file
+
 /**
  * Shared test utilities and mock factories
  *
