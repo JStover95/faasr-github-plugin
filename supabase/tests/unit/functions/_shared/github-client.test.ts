@@ -5,7 +5,7 @@
  */
 
 import { assertEquals, assert, assertRejects } from "jsr:@std/assert@1.0.16";
-import { GitHubClientService } from "../../../functions/_shared/github-client.ts";
+import { GitHubClientService } from "../../../../functions/_shared/github-client.ts";
 import { createTestUserSession, withEnvState } from "./test-utils.ts";
 
 // ============================================================================

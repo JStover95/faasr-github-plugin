@@ -12,8 +12,8 @@ import {
   getInstallationToken,
   getInstallation,
   checkInstallationPermissions,
-} from "../../../functions/_shared/github-app.ts";
-import type { GitHubInstallation } from "../../../functions/_shared/types.ts";
+} from "../../../../functions/_shared/github-app.ts";
+import type { GitHubInstallation } from "../../../../functions/_shared/types.ts";
 
 Deno.test("validateInstallationPermissions - valid permissions", () => {
   const installation: GitHubInstallation = {

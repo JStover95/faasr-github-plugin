@@ -13,8 +13,8 @@ import {
   createValidationErrorResponse,
   createNotFoundErrorResponse,
   createConfigurationErrorResponse,
-} from "../../../functions/_shared/error-handler.ts";
-import { corsHeaders } from "../../../functions/_shared/cors.ts";
+} from "../../../../functions/_shared/error-handler.ts";
+import { corsHeaders } from "../../../../functions/_shared/cors.ts";
 
 // ============================================================================
 // Tests for formatErrorMessage

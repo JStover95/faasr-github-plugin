@@ -5,7 +5,7 @@
  */
 
 import { assertEquals, assert, assertRejects } from "jsr:@std/assert@1.0.16";
-import { WorkflowStatusService } from "../../../functions/_shared/workflow-status-service.ts";
+import { WorkflowStatusService } from "../../../../functions/_shared/workflow-status-service.ts";
 import {
   createTestUserSession,
   createMockGitHubClientService,

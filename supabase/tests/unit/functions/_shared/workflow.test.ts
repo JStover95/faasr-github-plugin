@@ -12,7 +12,7 @@ import {
   triggerWorkflowDispatch,
   getWorkflowRunStatus,
   getWorkflowRunById,
-} from "../../../functions/_shared/workflow.ts";
+} from "../../../../functions/_shared/workflow.ts";
 import { createMockOctokit } from "./test-utils.ts";
 
 // ============================================================================

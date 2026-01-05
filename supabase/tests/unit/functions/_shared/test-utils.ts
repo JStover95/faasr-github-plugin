@@ -4,12 +4,12 @@
  * Provides reusable mocks and utilities for testing Supabase Edge Functions
  */
 
-import { Octokit, App } from "../../../functions/_shared/deps.ts";
+import { Octokit, App } from "../../../../functions/_shared/deps.ts";
 import type {
   GitHubInstallation,
   RepositoryFork,
   UserSession,
-} from "../../../functions/_shared/types.ts";
+} from "../../../../functions/_shared/types.ts";
 
 // ============================================================================
 // 1. Octokit Mock Factory
@@ -418,7 +418,7 @@ export function createTestUserSession(
 // 7. GitHub Client Service Mock Factory
 // ============================================================================
 
-import { GitHubClientService } from "../../../functions/_shared/github-client.ts";
+import { GitHubClientService } from "../../../../functions/_shared/github-client.ts";
 
 export interface MockGitHubClientServiceConfig {
   getCredentials?: () => { appId: string; privateKey: string } | null;
@@ -458,7 +458,7 @@ export function createMockGitHubClientService(
 // 8. Workflow Upload Service Mock Factory
 // ============================================================================
 
-import { WorkflowUploadService } from "../../../functions/_shared/workflow-upload-service.ts";
+import { WorkflowUploadService } from "../../../../functions/_shared/workflow-upload-service.ts";
 
 export interface MockWorkflowUploadServiceConfig {
   validateFile?: (
@@ -529,7 +529,7 @@ export function createMockWorkflowUploadService(
 // 9. Workflow Status Service Mock Factory
 // ============================================================================
 
-import { WorkflowStatusService } from "../../../functions/_shared/workflow-status-service.ts";
+import { WorkflowStatusService } from "../../../../functions/_shared/workflow-status-service.ts";
 
 export interface MockWorkflowStatusServiceConfig {
   getWorkflowStatus?: (

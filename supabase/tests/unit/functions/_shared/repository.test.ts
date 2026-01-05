@@ -8,7 +8,7 @@ import {
   createFork,
   ensureForkExists,
   pollUntilForkReady,
-} from "../../../functions/_shared/repository.ts";
+} from "../../../../functions/_shared/repository.ts";
 import { createMockOctokit } from "./test-utils.ts";
 
 Deno.test("checkForkExists returns fork info when fork exists", async () => {

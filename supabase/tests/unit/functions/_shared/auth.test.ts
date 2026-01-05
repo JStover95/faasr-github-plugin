@@ -13,12 +13,12 @@ import {
   createSessionCookie,
   createLogoutCookie,
   SESSION_COOKIE_NAME,
-} from "../../../functions/_shared/auth.ts";
+} from "../../../../functions/_shared/auth.ts";
 import {
   saveEnvState,
   restoreEnvState,
 } from "./test-utils.ts";
-import { jwt } from "../../../functions/_shared/deps.ts";
+import { jwt } from "../../../../functions/_shared/deps.ts";
 
 // ============================================================================
 // Tests for extractSessionToken
