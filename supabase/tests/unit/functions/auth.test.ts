@@ -11,6 +11,7 @@ import {
   handleCallback,
   handleGetSession,
   handleLogout,
+  deps,
 } from '../../../functions/auth/index.ts';
 import {
   createTestGitHubInstallation,
@@ -21,9 +22,6 @@ import {
   saveEnvState,
 } from './_shared/test-utils.ts';
 import type { GitHubInstallation } from '../../../functions/_shared/types.ts';
-import * as githubApp from '../../../functions/_shared/github-app.ts';
-import * as repository from '../../../functions/_shared/repository.ts';
-import * as auth from '../../../functions/_shared/auth.ts';
 
 // ============================================================================
 // Tests for handleInstall
@@ -110,45 +108,45 @@ Deno.test('handleCallback - successful installation flow', async () => {
     'GITHUB_PRIVATE_KEY',
     'JWT_SECRET',
   ]);
-  
+
   // Create mock data
   const mockInstallation: GitHubInstallation = createTestGitHubInstallation();
   const mockFork = createTestRepositoryFork();
   const mockToken = 'mock-installation-token';
 
-  // Create stubs for all the imported functions
+  // Create stubs for all the service functions
   const getInstallationStub = stub(
-    githubApp,
+    deps,
     'getInstallation',
     () => Promise.resolve(mockInstallation),
   );
 
   const checkPermissionsStub = stub(
-    githubApp,
+    deps,
     'checkInstallationPermissions',
     () => Promise.resolve({ valid: true, missingPermissions: [] }),
   );
 
   const getTokenStub = stub(
-    githubApp,
+    deps,
     'getInstallationToken',
     () => Promise.resolve({ token: mockToken, expiresAt: new Date().toISOString() }),
   );
 
   const ensureForkStub = stub(
-    repository,
+    deps,
     'ensureForkExists',
     () => Promise.resolve(mockFork),
   );
 
   const createSessionTokenStub = stub(
-    auth,
+    deps,
     'createSessionToken',
     () => 'mock-session-token',
   );
 
   const createSessionCookieStub = stub(
-    auth,
+    deps,
     'createSessionCookie',
     () => 'faasr_session=mock-session-token; Path=/; HttpOnly; SameSite=Lax',
   );
@@ -204,10 +202,10 @@ Deno.test('handleCallback - successful installation flow', async () => {
 
 Deno.test('handleCallback - handles rate limit errors', async () => {
   const saved = saveEnvState(['GITHUB_APP_ID', 'GITHUB_PRIVATE_KEY']);
-  
+
   // Stub getInstallation to throw a rate limit error
   const getInstallationStub = stub(
-    githubApp,
+    deps,
     'getInstallation',
     () => Promise.reject(new Error('API rate limit exceeded')),
   );
@@ -242,17 +240,17 @@ Deno.test('handleCallback - handles rate limit errors', async () => {
 
 Deno.test('handleCallback - handles permission errors', async () => {
   const saved = saveEnvState(['GITHUB_APP_ID', 'GITHUB_PRIVATE_KEY']);
-  
+
   const mockInstallation: GitHubInstallation = createTestGitHubInstallation();
-  
+
   const getInstallationStub = stub(
-    githubApp,
+    deps,
     'getInstallation',
     () => Promise.resolve(mockInstallation),
   );
 
   const checkPermissionsStub = stub(
-    githubApp,
+    deps,
     'checkInstallationPermissions',
     () => Promise.resolve({
       valid: false,
