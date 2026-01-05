@@ -29,17 +29,75 @@ const defaultFetchOptions: RequestInit = {
 };
 
 /**
+ * Format user-friendly error message from API response
+ *
+ * @param status - HTTP status code
+ * @param errorMessage - Error message from API
+ * @returns User-friendly error message
+ */
+function formatApiErrorMessage(status: number, errorMessage?: string): string {
+  // Use API error message if available and user-friendly
+  if (errorMessage) {
+    return errorMessage;
+  }
+
+  // Provide default messages based on status code
+  switch (status) {
+    case 400:
+      return 'Invalid request. Please check your input and try again.';
+    case 401:
+      return 'Authentication required. Please log in and try again.';
+    case 403:
+      return 'Permission denied. Please check your GitHub App permissions.';
+    case 404:
+      return 'Resource not found. Please verify the file or workflow exists.';
+    case 429:
+      return 'Too many requests. Please wait a few minutes and try again.';
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return 'Server error. Please try again in a few minutes.';
+    default:
+      return `Request failed (${status}). Please try again.`;
+  }
+}
+
+/**
  * Handle API response and parse JSON
+ *
+ * Provides comprehensive error handling with user-friendly messages for:
+ * - Network failures (connection errors, timeouts)
+ * - HTTP errors (4xx, 5xx status codes)
+ * - JSON parsing errors
  */
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error: ErrorResponse = await response.json().catch(() => ({
-      success: false,
-      error: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    let errorMessage: string;
+    try {
+      const error: ErrorResponse = await response.json();
+      errorMessage = formatApiErrorMessage(
+        response.status,
+        error.error,
+      );
+    } catch {
+      // If JSON parsing fails, use status-based message
+      errorMessage = formatApiErrorMessage(response.status);
+    }
+
+    // Create error with user-friendly message
+    const error = new Error(errorMessage);
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
   }
-  return response.json();
+
+  try {
+    return await response.json();
+  } catch (error) {
+    throw new Error(
+      'Invalid response from server. Please try again or contact support.',
+    );
+  }
 }
 
 /**
