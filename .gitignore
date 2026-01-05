@@ -49,3 +49,5 @@ target/
 
 # Universal
 *.log
+
+.notes.md
