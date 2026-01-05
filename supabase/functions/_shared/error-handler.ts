@@ -36,7 +36,7 @@ export function formatErrorMessage(
       message.includes('too many requests') ||
       message.includes('429')
     ) {
-      return 'Too many requests to GitHub. Please wait a few minutes and try again. Rate limits reset every hour.';
+      return 'Too many requests. Please try again in a few minutes.';
     }
 
     // Permission errors
@@ -46,7 +46,7 @@ export function formatErrorMessage(
       message.includes('403') ||
       message.includes('access denied')
     ) {
-      return 'Permission denied. Please ensure the GitHub App has the required permissions: Contents (read & write), Actions (read & write), and Metadata (read). You may need to reinstall the app.';
+      return 'Permission denied. Please check your GitHub App permissions.';
     }
 
     // Network failures
@@ -68,7 +68,7 @@ export function formatErrorMessage(
       message.includes('404') ||
       message.includes('does not exist')
     ) {
-      return 'Resource not found. Please check that the repository exists and you have access to it. If you just created a fork, wait a moment and try again.';
+      return 'Resource not found. Please check your repository and workflow configuration.';
     }
 
     // Validation errors
@@ -101,7 +101,7 @@ export function formatErrorMessage(
       message.includes('token') ||
       message.includes('credentials')
     ) {
-      return 'Authentication failed. Please try logging in again. If the problem persists, you may need to reinstall the GitHub App.';
+      return 'Authentication required';
     }
 
     // Server errors
@@ -181,7 +181,7 @@ export function handleGitHubError(error: unknown): string {
     return formatErrorMessage(error, 'GitHub API error occurred');
   }
 
-  return 'An unexpected error occurred while communicating with GitHub. Please try again later.';
+  return 'An unexpected error occurred while communicating with GitHub.';
 }
 
 /**
