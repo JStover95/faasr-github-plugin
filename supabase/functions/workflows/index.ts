@@ -20,6 +20,16 @@ import {
 } from '../_shared/error-handler.ts';
 
 /**
+ * Services object for dependency injection and testing
+ * This allows services to be stubbed in tests
+ */
+export const deps = {
+  GitHubClientService,
+  WorkflowUploadService,
+  WorkflowStatusService,
+};
+
+/**
  * Parse FormData from request
  */
 export async function parseFormData(req: Request): Promise<{
@@ -52,8 +62,8 @@ export async function handleUpload(req: Request): Promise<Response> {
     }
 
     // Initialize services
-    const githubClient = new GitHubClientService();
-    const uploadService = new WorkflowUploadService(githubClient);
+    const githubClient = new deps.GitHubClientService();
+    const uploadService = new deps.WorkflowUploadService(githubClient);
 
     // Execute upload business logic
     const uploadResult = await uploadService.uploadWorkflow(
@@ -117,8 +127,8 @@ export async function handleStatus(req: Request, fileName: string): Promise<Resp
     }
 
     // Initialize services
-    const githubClient = new GitHubClientService();
-    const statusService = new WorkflowStatusService(githubClient);
+    const githubClient = new deps.GitHubClientService();
+    const statusService = new deps.WorkflowStatusService(githubClient);
 
     // Execute status retrieval business logic
     const result = await statusService.getWorkflowStatus(session, fileName);
