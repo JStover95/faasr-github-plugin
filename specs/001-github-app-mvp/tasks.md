@@ -182,16 +182,16 @@ Phase 5 (Polish)
 
 **Tests:**
 
-- [ ] T074 Create integration test for complete installation flow (end-to-end test from install button to fork creation)
-- [ ] T075 Create integration test for complete upload flow (end-to-end test from file upload to workflow trigger)
+- [X] T074 Create integration test for complete installation flow (end-to-end test from install button to fork creation)
+- [X] T075 Create integration test for complete upload flow (end-to-end test from file upload to workflow trigger)
 
 **Implementation:**
 
-- [ ] T076 Add comprehensive error messages for all error scenarios (rate limits, permissions, network failures)
-- [ ] T077 Add loading states to all async operations in frontend components
-- [ ] T078 Add JSDoc comments to all public APIs, classes, functions, and modules (React components, Edge Functions, shared utilities) per Constitution Principle II
-- [ ] T079 Update README.md with complete setup instructions and deployment guide
-- [ ] T080 Add environment variable validation on application startup (frontend and backend)
+- [X] T076 Add comprehensive error messages for all error scenarios (rate limits, permissions, network failures)
+- [X] T077 Add loading states to all async operations in frontend components
+- [X] T078 Add JSDoc comments to all public APIs, classes, functions, and modules (React components, Edge Functions, shared utilities) per Constitution Principle II
+- [X] T079 Update README.md with complete setup instructions and deployment guide
+- [X] T080 Add environment variable validation on application startup (frontend and backend)
 
 ## Parallel Execution Examples
 
