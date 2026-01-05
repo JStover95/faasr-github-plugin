@@ -57,4 +57,6 @@ export function handleHealthCheck(req: Request): Response {
   }
 }
 
-serve(handleHealthCheck);
+if (import.meta.main) {
+  serve(handleHealthCheck);
+}

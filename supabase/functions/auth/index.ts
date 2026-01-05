@@ -25,6 +25,19 @@ import { Octokit } from '../_shared/deps.ts';
 import type { UserSession } from '../_shared/types.ts';
 
 /**
+ * Services object for dependency injection and testing
+ * This allows functions to be stubbed in tests
+ */
+export const deps = {
+  getInstallation,
+  checkInstallationPermissions,
+  getInstallationToken,
+  ensureForkExists,
+  createSessionToken,
+  createSessionCookie,
+};
+
+/**
  * Handle GET /auth/install - Initiate GitHub App installation
  */
 export function handleInstall(_req: Request): Response {
@@ -96,14 +109,14 @@ export async function handleCallback(req: Request): Promise<Response> {
     }
 
     // Get installation information
-    const installation = await getInstallation(
+    const installation = await deps.getInstallation(
       appId,
       privateKey,
       installationId,
     );
 
     // Validate permissions
-    const permissionCheck = await checkInstallationPermissions(
+    const permissionCheck = await deps.checkInstallationPermissions(
       appId,
       privateKey,
       installationId,
@@ -124,7 +137,7 @@ export async function handleCallback(req: Request): Promise<Response> {
     }
 
     // Get installation token for API operations
-    const { token } = await getInstallationToken(
+    const { token } = await deps.getInstallationToken(
       appId,
       privateKey,
       installationId,
@@ -132,7 +145,10 @@ export async function handleCallback(req: Request): Promise<Response> {
     const octokit = new Octokit({ auth: token });
 
     // Ensure fork exists
-    const fork = await ensureForkExists(octokit, installation.account.login);
+    const fork = await deps.ensureForkExists(
+      octokit,
+      installation.account.login,
+    );
 
     // Create session
     const sessionData: Omit<
@@ -145,8 +161,8 @@ export async function handleCallback(req: Request): Promise<Response> {
       avatarUrl: installation.account.avatar_url,
     };
 
-    const sessionToken = createSessionToken(sessionData);
-    const cookie = createSessionCookie(sessionToken);
+    const sessionToken = deps.createSessionToken(sessionData);
+    const cookie = deps.createSessionCookie(sessionToken);
 
     // Return success response with session cookie
     return new Response(
@@ -264,7 +280,8 @@ export function handleLogout(_req: Request): Response {
 /**
  * Main Edge Function handler
  */
-Deno.serve(async (req: Request) => {
+if (import.meta.main) {
+  Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -310,4 +327,5 @@ Deno.serve(async (req: Request) => {
       },
     );
   }
-});
+  });
+}

@@ -166,7 +166,8 @@ export async function handleStatus(req: Request, fileName: string): Promise<Resp
 /**
  * Main Edge Function handler
  */
-Deno.serve(async (req: Request) => {
+if (import.meta.main) {
+  Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -223,4 +224,5 @@ Deno.serve(async (req: Request) => {
       },
     );
   }
-});
+  });
+}
