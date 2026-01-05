@@ -78,6 +78,32 @@ export interface MockOctokitConfig {
         created_at: string;
       };
     };
+    listWorkflowRuns?: (params: {
+      owner: string;
+      repo: string;
+      workflow_id: string;
+      per_page?: number;
+    }) => Promise<{
+      data: {
+        workflow_runs: Array<{
+          id: number;
+          html_url: string;
+          status: string;
+          conclusion: string | null;
+          created_at: string;
+        }>;
+      };
+    }> | {
+      data: {
+        workflow_runs: Array<{
+          id: number;
+          html_url: string;
+          status: string;
+          conclusion: string | null;
+          created_at: string;
+        }>;
+      };
+    };
   };
   auth?: () => Promise<{ token: string; expiresAt: string }> | { token: string; expiresAt: string };
   request?: (route: string, options?: Record<string, unknown>) => Promise<{
@@ -95,6 +121,7 @@ export interface MockOctokitCallTracker {
   actions: {
     createWorkflowDispatch: number;
     getWorkflowRun: number;
+    listWorkflowRuns: number;
   };
   auth: number;
   request: number;
@@ -113,6 +140,7 @@ export function createMockOctokit(
     actions: {
       createWorkflowDispatch: 0,
       getWorkflowRun: 0,
+      listWorkflowRuns: 0,
     },
     auth: 0,
     request: 0,
@@ -193,6 +221,23 @@ export function createMockOctokit(
           }
           throw { status: 404 };
         },
+        listWorkflowRuns: async (params: {
+          owner: string;
+          repo: string;
+          workflow_id: string;
+          per_page?: number;
+        }) => {
+          tracker.actions.listWorkflowRuns++;
+          if (config.actions?.listWorkflowRuns) {
+            const result = config.actions.listWorkflowRuns(params);
+            return result instanceof Promise ? await result : result;
+          }
+          return {
+            data: {
+              workflow_runs: [],
+            },
+          };
+        },
       },
     },
     auth: async () => {
@@ -224,6 +269,7 @@ export interface MockAppConfig {
   getInstallationOctokit?: (
     installationId: number
   ) => Promise<Octokit> | Octokit;
+  auth?: () => Promise<{ token: string; expiresAt: string }> | { token: string; expiresAt: string };
 }
 
 export function createMockApp(
@@ -238,6 +284,13 @@ export function createMockApp(
       // Default: return a basic mock Octokit
       const { octokit } = createMockOctokit();
       return octokit;
+    },
+    auth: async () => {
+      if (config.auth) {
+        const result = config.auth();
+        return result instanceof Promise ? await result : result;
+      }
+      return { token: "mock-token", expiresAt: new Date().toISOString() };
     },
   } as unknown as App;
 
@@ -359,5 +412,195 @@ export function createTestUserSession(
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     ...overrides,
   };
+}
+
+// ============================================================================
+// 7. GitHub Client Service Mock Factory
+// ============================================================================
+
+import { GitHubClientService } from "../../../functions/_shared/github-client.ts";
+
+export interface MockGitHubClientServiceConfig {
+  getCredentials?: () => { appId: string; privateKey: string } | null;
+  validateConfiguration?: () => { valid: boolean; error?: string };
+  getAuthenticatedOctokit?: (session: UserSession) => Promise<Octokit>;
+}
+
+export function createMockGitHubClientService(
+  config: MockGitHubClientServiceConfig = {}
+): GitHubClientService {
+  const mockService = {
+    getCredentials: () => {
+      if (config.getCredentials) {
+        return config.getCredentials();
+      }
+      return { appId: "test-app-id", privateKey: "test-private-key" };
+    },
+    validateConfiguration: () => {
+      if (config.validateConfiguration) {
+        return config.validateConfiguration();
+      }
+      return { valid: true };
+    },
+    getAuthenticatedOctokit: async (session: UserSession) => {
+      if (config.getAuthenticatedOctokit) {
+        return await config.getAuthenticatedOctokit(session);
+      }
+      const { octokit } = createMockOctokit();
+      return octokit;
+    },
+  } as unknown as GitHubClientService;
+
+  return mockService;
+}
+
+// ============================================================================
+// 8. Workflow Upload Service Mock Factory
+// ============================================================================
+
+import { WorkflowUploadService } from "../../../functions/_shared/workflow-upload-service.ts";
+
+export interface MockWorkflowUploadServiceConfig {
+  validateFile?: (
+    fileName: string,
+    fileContent: string,
+    fileSize: number
+  ) => { valid: boolean; errors: string[]; sanitizedFileName: string };
+  uploadWorkflow?: (
+    session: UserSession,
+    file: File,
+    fileName: string
+  ) => Promise<{ fileName: string; commitSha: string }>;
+  triggerRegistration?: (
+    session: UserSession,
+    fileName: string
+  ) => Promise<{ workflowRunId?: number; workflowRunUrl?: string }>;
+}
+
+export function createMockWorkflowUploadService(
+  config: MockWorkflowUploadServiceConfig = {}
+): WorkflowUploadService {
+  const mockService = {
+    validateFile: (
+      fileName: string,
+      fileContent: string,
+      fileSize: number
+    ) => {
+      if (config.validateFile) {
+        return config.validateFile(fileName, fileContent, fileSize);
+      }
+      return {
+        valid: true,
+        errors: [],
+        sanitizedFileName: fileName,
+      };
+    },
+    uploadWorkflow: async (
+      session: UserSession,
+      file: File,
+      fileName: string
+    ) => {
+      if (config.uploadWorkflow) {
+        return await config.uploadWorkflow(session, file, fileName);
+      }
+      return {
+        fileName: "test-workflow.json",
+        commitSha: "abc123",
+      };
+    },
+    triggerRegistration: async (
+      session: UserSession,
+      fileName: string
+    ) => {
+      if (config.triggerRegistration) {
+        return await config.triggerRegistration(session, fileName);
+      }
+      return {
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/workflows/runs/123",
+      };
+    },
+  } as unknown as WorkflowUploadService;
+
+  return mockService;
+}
+
+// ============================================================================
+// 9. Workflow Status Service Mock Factory
+// ============================================================================
+
+import { WorkflowStatusService } from "../../../functions/_shared/workflow-status-service.ts";
+
+export interface MockWorkflowStatusServiceConfig {
+  getWorkflowStatus?: (
+    session: UserSession,
+    fileName: string
+  ) => Promise<{
+    fileName: string;
+    status: "pending" | "running" | "success" | "failed";
+    workflowRunId: number;
+    workflowRunUrl: string;
+    errorMessage?: string | null;
+    triggeredAt: string;
+    completedAt: string | null;
+  }>;
+}
+
+export function createMockWorkflowStatusService(
+  config: MockWorkflowStatusServiceConfig = {}
+): WorkflowStatusService {
+  const mockService = {
+    getWorkflowStatus: async (session: UserSession, fileName: string) => {
+      if (config.getWorkflowStatus) {
+        return await config.getWorkflowStatus(session, fileName);
+      }
+      return {
+        fileName: "test-workflow.json",
+        status: "success" as const,
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/workflows/runs/123",
+        errorMessage: null,
+        triggeredAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+      };
+    },
+  } as unknown as WorkflowStatusService;
+
+  return mockService;
+}
+
+// ============================================================================
+// 10. Request Mock Factory
+// ============================================================================
+
+export interface MockRequestConfig {
+  method?: string;
+  url?: string;
+  headers?: Headers | Record<string, string>;
+  body?: BodyInit | null;
+}
+
+export function createMockRequest(
+  config: MockRequestConfig = {}
+): Request {
+  const method = config.method || "GET";
+  const url = config.url || "https://example.com";
+  const headers = config.headers || {};
+
+  let headersObj: Headers;
+  if (headers instanceof Headers) {
+    headersObj = headers;
+  } else {
+    headersObj = new Headers();
+    for (const [key, value] of Object.entries(headers)) {
+      headersObj.set(key, value);
+    }
+  }
+
+  return new Request(url, {
+    method,
+    headers: headersObj,
+    body: config.body,
+  });
 }
 
