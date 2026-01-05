@@ -36,7 +36,7 @@ export interface RepositoryFork {
   /** Full GitHub URL to the fork */
   forkUrl: string;
   /** Status of fork operation */
-  forkStatus: "pending" | "exists" | "created" | "failed";
+  forkStatus: 'pending' | 'exists' | 'created' | 'failed';
   /** Default branch name (typically "main") */
   defaultBranch: string;
   /** When fork was created (if newly created) */
@@ -54,7 +54,7 @@ export interface WorkflowJSONFile {
   /** File size in bytes */
   fileSize: number;
   /** Status of upload/commit operation */
-  uploadStatus: "pending" | "valid" | "invalid" | "committed" | "failed";
+  uploadStatus: 'pending' | 'valid' | 'invalid' | 'committed' | 'failed';
   /** Array of validation error messages */
   validationErrors?: string[];
   /** When file was uploaded */
@@ -70,7 +70,7 @@ export interface WorkflowRegistration {
   /** Name of the workflow file being registered */
   workflowFileName: string;
   /** Status of registration workflow */
-  registrationStatus: "pending" | "running" | "success" | "failed";
+  registrationStatus: 'pending' | 'running' | 'success' | 'failed';
   /** GitHub Actions workflow run ID (if available) */
   workflowRunId?: number;
   /** URL to view workflow run in GitHub */

@@ -5,26 +5,26 @@
  * Orchestrates workflow run lookup and status formatting.
  */
 
-import type { UserSession } from "./types.ts";
-import { GitHubClientService } from "./github-client.ts";
-import { sanitizeFileName, getWorkflowRunById } from "./workflow.ts";
+import type { UserSession } from './types.ts';
+import { GitHubClientService } from './github-client.ts';
+import { getWorkflowRunById, sanitizeFileName } from './workflow.ts';
 
 /**
  * Workflow file name for FaaSr Register workflow
  */
-const REGISTER_WORKFLOW_ID = "register-workflow.yml";
+const REGISTER_WORKFLOW_ID = 'register-workflow.yml';
 
 /**
  * Repository name for workflow files
  */
-const REPO_NAME = "FaaSr-workflow";
+const REPO_NAME = 'FaaSr-workflow';
 
 /**
  * Status result containing workflow run information
  */
 export interface StatusResult {
   fileName: string;
-  status: "pending" | "running" | "success" | "failed";
+  status: 'pending' | 'running' | 'success' | 'failed';
   workflowRunId: number;
   workflowRunUrl: string;
   errorMessage?: string | null;
@@ -50,12 +50,14 @@ export class WorkflowStatusService {
    */
   async getWorkflowStatus(
     session: UserSession,
-    fileName: string
+    fileName: string,
   ): Promise<StatusResult> {
     // Validate GitHub App configuration
     const configValidation = this.githubClient.validateConfiguration();
     if (!configValidation.valid) {
-      throw new Error(configValidation.error || "GitHub App configuration missing");
+      throw new Error(
+        configValidation.error || 'GitHub App configuration missing',
+      );
     }
 
     // Get authenticated Octokit instance
@@ -74,7 +76,7 @@ export class WorkflowStatusService {
     });
 
     if (runs.data.workflow_runs.length === 0) {
-      throw new Error("Workflow run not found");
+      throw new Error('Workflow run not found');
     }
 
     // Get the most recent run
@@ -83,11 +85,11 @@ export class WorkflowStatusService {
       octokit,
       session.userLogin,
       REPO_NAME,
-      mostRecentRun.id
+      mostRecentRun.id,
     );
 
     if (!runStatus) {
-      throw new Error("Workflow run not found");
+      throw new Error('Workflow run not found');
     }
 
     // Format response data
@@ -96,16 +98,14 @@ export class WorkflowStatusService {
       status: runStatus.status,
       workflowRunId: runStatus.id,
       workflowRunUrl: runStatus.htmlUrl,
-      errorMessage:
-        runStatus.status === "failed"
-          ? runStatus.conclusion || "Workflow registration failed"
-          : null,
+      errorMessage: runStatus.status === 'failed'
+        ? runStatus.conclusion || 'Workflow registration failed'
+        : null,
       triggeredAt: runStatus.createdAt.toISOString(),
       completedAt:
-        runStatus.status === "success" || runStatus.status === "failed"
+        runStatus.status === 'success' || runStatus.status === 'failed'
           ? new Date().toISOString()
           : null,
     };
   }
 }
-

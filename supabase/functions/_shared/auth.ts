@@ -7,13 +7,13 @@
  * - Session creation with HMAC-SHA256 signing
  */
 
-import { jwt } from "./deps.ts";
-import type { UserSession } from "./types.ts";
+import { jwt } from './deps.ts';
+import type { UserSession } from './types.ts';
 
 /**
  * Session cookie name
  */
-export const SESSION_COOKIE_NAME = "faasr_session";
+export const SESSION_COOKIE_NAME = 'faasr_session';
 
 /**
  * JWT payload structure for session tokens
@@ -34,20 +34,20 @@ interface JWTPayload {
  * @returns True if payload has the expected structure
  */
 function isJWTPayload(decoded: unknown): decoded is JWTPayload {
-  if (typeof decoded !== "object" || decoded === null) {
+  if (typeof decoded !== 'object' || decoded === null) {
     return false;
   }
 
   const payload = decoded as Record<string, unknown>;
 
   return (
-    typeof payload.installationId === "string" &&
-    typeof payload.userLogin === "string" &&
-    typeof payload.userId === "number" &&
+    typeof payload.installationId === 'string' &&
+    typeof payload.userLogin === 'string' &&
+    typeof payload.userId === 'number' &&
     (payload.avatarUrl === undefined ||
-      typeof payload.avatarUrl === "string") &&
-    typeof payload.iat === "number" &&
-    typeof payload.exp === "number"
+      typeof payload.avatarUrl === 'string') &&
+    typeof payload.iat === 'number' &&
+    typeof payload.exp === 'number'
   );
 }
 
@@ -61,7 +61,7 @@ export function extractSessionToken(cookies: string | Headers): string | null {
   let cookieString: string;
 
   if (cookies instanceof Headers) {
-    cookieString = cookies.get("cookie") || "";
+    cookieString = cookies.get('cookie') || '';
   } else {
     cookieString = cookies;
   }
@@ -71,9 +71,9 @@ export function extractSessionToken(cookies: string | Headers): string | null {
   }
 
   // Parse cookies
-  const cookiePairs = cookieString.split(";").map((c) => c.trim());
+  const cookiePairs = cookieString.split(';').map((c) => c.trim());
   for (const pair of cookiePairs) {
-    const [name, value] = pair.split("=");
+    const [name, value] = pair.split('=');
     if (name === SESSION_COOKIE_NAME && value) {
       return decodeURIComponent(value);
     }
@@ -92,15 +92,15 @@ export function extractSessionToken(cookies: string | Headers): string | null {
  * @returns Decoded session data or null if invalid, expired, or tampered with
  */
 export function validateSessionToken(token: string): UserSession | null {
-  const secret = Deno.env.get("JWT_SECRET");
+  const secret = Deno.env.get('JWT_SECRET');
   if (!secret) {
-    console.error("JWT_SECRET environment variable is required");
+    console.error('JWT_SECRET environment variable is required');
     return null;
   }
 
   try {
     const decoded = jwt.verify(token, secret, {
-      algorithms: ["HS256"],
+      algorithms: ['HS256'],
     });
 
     if (!isJWTPayload(decoded)) {
@@ -134,11 +134,11 @@ export function validateSessionToken(token: string): UserSession | null {
  * @throws Error if JWT_SECRET environment variable is not set
  */
 export function createSessionToken(
-  session: Omit<UserSession, "jwtToken" | "createdAt" | "expiresAt">
+  session: Omit<UserSession, 'jwtToken' | 'createdAt' | 'expiresAt'>,
 ): string {
-  const secret = Deno.env.get("JWT_SECRET");
+  const secret = Deno.env.get('JWT_SECRET');
   if (!secret) {
-    throw new Error("JWT_SECRET environment variable is required");
+    throw new Error('JWT_SECRET environment variable is required');
   }
 
   const payload = {
@@ -149,8 +149,8 @@ export function createSessionToken(
   };
 
   return jwt.sign(payload, secret, {
-    algorithm: "HS256",
-    expiresIn: "24h",
+    algorithm: 'HS256',
+    expiresIn: '24h',
   });
 }
 
@@ -161,7 +161,7 @@ export function createSessionToken(
  * @returns User session if valid, null otherwise
  */
 export function getSessionFromRequest(request: Request): UserSession | null {
-  const cookies = request.headers.get("cookie") || "";
+  const cookies = request.headers.get('cookie') || '';
   const token = extractSessionToken(cookies);
   if (!token) {
     return null;
@@ -178,11 +178,13 @@ export function getSessionFromRequest(request: Request): UserSession | null {
  */
 export function createSessionCookie(
   token: string,
-  maxAge: number = 24 * 60 * 60
+  maxAge: number = 24 * 60 * 60,
 ): string {
-  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(
-    token
-  )}; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}; Path=/`;
+  return `${SESSION_COOKIE_NAME}=${
+    encodeURIComponent(
+      token,
+    )
+  }; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}; Path=/`;
 }
 
 /**

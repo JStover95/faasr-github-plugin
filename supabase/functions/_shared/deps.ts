@@ -6,10 +6,10 @@
  */
 
 // GitHub App authentication
-export { App } from "npm:@octokit/app@16.1.2";
+export { App } from 'npm:@octokit/app@16.1.2';
 
 // GitHub REST API client
-export { Octokit } from "npm:@octokit/rest@22.0.1";
+export { Octokit } from 'npm:@octokit/rest@22.0.1';
 
 // JWT signing for GitHub App authentication
-export * as jwt from "npm:jsonwebtoken@^9.0.2";
+export * as jwt from 'npm:jsonwebtoken@^9.0.2';

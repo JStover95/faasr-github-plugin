@@ -7,8 +7,8 @@
  * - Permission validation
  */
 
-import { App, jwt } from "./deps.ts";
-import type { GitHubInstallation } from "./types.ts";
+import { App, jwt } from './deps.ts';
+import type { GitHubInstallation } from './types.ts';
 
 /**
  * GitHub App configuration
@@ -35,13 +35,13 @@ interface InstallationToken {
  * @returns True if value has the expected token structure
  */
 function isInstallationToken(value: unknown): value is InstallationToken {
-  if (typeof value !== "object" || value === null) {
+  if (typeof value !== 'object' || value === null) {
     return false;
   }
 
   const token = value as Record<string, unknown>;
 
-  return typeof token.token === "string" && typeof token.expiresAt === "string";
+  return typeof token.token === 'string' && typeof token.expiresAt === 'string';
 }
 
 /**
@@ -51,20 +51,20 @@ function isInstallationToken(value: unknown): value is InstallationToken {
  * @returns True if value has the expected installation structure
  */
 function isGitHubInstallation(value: unknown): value is GitHubInstallation {
-  if (typeof value !== "object" || value === null) {
+  if (typeof value !== 'object' || value === null) {
     return false;
   }
 
   const installation = value as Record<string, unknown>;
 
   // Check required top-level fields
-  if (typeof installation.id !== "number") {
+  if (typeof installation.id !== 'number') {
     return false;
   }
 
   // Check account structure
   if (
-    typeof installation.account !== "object" ||
+    typeof installation.account !== 'object' ||
     installation.account === null
   ) {
     return false;
@@ -73,9 +73,9 @@ function isGitHubInstallation(value: unknown): value is GitHubInstallation {
   const account = installation.account as Record<string, unknown>;
 
   return (
-    typeof account.login === "string" &&
-    typeof account.id === "number" &&
-    typeof account.avatar_url === "string"
+    typeof account.login === 'string' &&
+    typeof account.id === 'number' &&
+    typeof account.avatar_url === 'string'
   );
 }
 
@@ -84,9 +84,9 @@ function isGitHubInstallation(value: unknown): value is GitHubInstallation {
  * Per FR-004: repository creation, workflow dispatch, file management
  */
 export const REQUIRED_PERMISSIONS = {
-  contents: "write", // To create forks, commit files
-  actions: "write", // To trigger workflow_dispatch events
-  metadata: "read", // Basic repository metadata (always required)
+  contents: 'write', // To create forks, commit files
+  actions: 'write', // To trigger workflow_dispatch events
+  metadata: 'read', // Basic repository metadata (always required)
 } as const;
 
 /**
@@ -96,13 +96,12 @@ export function createGitHubApp(config: GitHubAppConfig): App {
   return new App({
     appId: config.appId,
     privateKey: config.privateKey,
-    oauth:
-      config.clientId && config.clientSecret
-        ? {
-            clientId: config.clientId,
-            clientSecret: config.clientSecret,
-          }
-        : undefined,
+    oauth: config.clientId && config.clientSecret
+      ? {
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+      }
+      : undefined,
   });
 }
 
@@ -125,7 +124,7 @@ export function generateAppJWT(appId: string, privateKey: string): string {
   };
 
   return jwt.sign(payload, privateKey, {
-    algorithm: "RS256",
+    algorithm: 'RS256',
   });
 }
 
@@ -140,17 +139,17 @@ export function generateAppJWT(appId: string, privateKey: string): string {
 export async function getInstallationToken(
   appId: string,
   privateKey: string,
-  installationId: string
+  installationId: string,
 ): Promise<{ token: string; expiresAt: string }> {
   const app = createGitHubApp({ appId, privateKey });
   const octokit = await app.getInstallationOctokit(
-    parseInt(installationId, 10)
+    parseInt(installationId, 10),
   );
 
   const token = await octokit.auth();
 
   if (!isInstallationToken(token)) {
-    throw new Error("Invalid installation token response from GitHub API");
+    throw new Error('Invalid installation token response from GitHub API');
   }
 
   return {
@@ -170,22 +169,22 @@ export async function getInstallationToken(
 export async function getInstallation(
   appId: string,
   privateKey: string,
-  installationId: string
+  installationId: string,
 ): Promise<GitHubInstallation> {
   const app = createGitHubApp({ appId, privateKey });
   const octokit = await app.getInstallationOctokit(
-    parseInt(installationId, 10)
+    parseInt(installationId, 10),
   );
 
   const response = await octokit.request(
-    "GET /app/installations/{installation_id}",
+    'GET /app/installations/{installation_id}',
     {
       installation_id: parseInt(installationId, 10),
-    }
+    },
   );
 
   if (!isGitHubInstallation(response.data)) {
-    throw new Error("Invalid installation data response from GitHub API");
+    throw new Error('Invalid installation data response from GitHub API');
   }
 
   return response.data;
@@ -198,24 +197,24 @@ export async function getInstallation(
  * @returns Object with validation result and missing permissions
  */
 export function validateInstallationPermissions(
-  installation: GitHubInstallation
+  installation: GitHubInstallation,
 ): { valid: boolean; missingPermissions: string[] } {
   const missingPermissions: string[] = [];
   const permissions = installation.permissions || {};
 
   // Check contents permission
-  if (!permissions.contents || permissions.contents !== "write") {
-    missingPermissions.push("contents:write");
+  if (!permissions.contents || permissions.contents !== 'write') {
+    missingPermissions.push('contents:write');
   }
 
   // Check actions permission
-  if (!permissions.actions || permissions.actions !== "write") {
-    missingPermissions.push("actions:write");
+  if (!permissions.actions || permissions.actions !== 'write') {
+    missingPermissions.push('actions:write');
   }
 
   // Check metadata permission (always required)
-  if (!permissions.metadata || permissions.metadata !== "read") {
-    missingPermissions.push("metadata:read");
+  if (!permissions.metadata || permissions.metadata !== 'read') {
+    missingPermissions.push('metadata:read');
   }
 
   return {
@@ -235,13 +234,13 @@ export function validateInstallationPermissions(
 export async function checkInstallationPermissions(
   appId: string,
   privateKey: string,
-  installationId: string
+  installationId: string,
 ): Promise<{ valid: boolean; missingPermissions: string[] }> {
   try {
     const installation = await getInstallation(
       appId,
       privateKey,
-      installationId
+      installationId,
     );
     return validateInstallationPermissions(installation);
   } catch (_error) {

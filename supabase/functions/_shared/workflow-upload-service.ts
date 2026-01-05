@@ -5,29 +5,29 @@
  * Orchestrates file validation, commit, and workflow dispatch.
  */
 
-import type { UserSession } from "./types.ts";
-import { GitHubClientService } from "./github-client.ts";
+import type { UserSession } from './types.ts';
+import { GitHubClientService } from './github-client.ts';
 import {
-  validateWorkflowFile,
-  sanitizeFileName,
   commitFileToRepository,
+  sanitizeFileName,
   triggerWorkflowDispatch,
-} from "./workflow.ts";
+  validateWorkflowFile,
+} from './workflow.ts';
 
 /**
  * Workflow file name for FaaSr Register workflow
  */
-const REGISTER_WORKFLOW_ID = "register-workflow.yml";
+const REGISTER_WORKFLOW_ID = 'register-workflow.yml';
 
 /**
  * Default branch name
  */
-const DEFAULT_BRANCH = "main";
+const DEFAULT_BRANCH = 'main';
 
 /**
  * Repository name for workflow files
  */
-const REPO_NAME = "FaaSr-workflow";
+const REPO_NAME = 'FaaSr-workflow';
 
 /**
  * Upload result containing file commit information
@@ -72,13 +72,13 @@ export class WorkflowUploadService {
   validateFile(
     fileName: string,
     fileContent: string,
-    fileSize: number
+    fileSize: number,
   ): { valid: boolean; errors: string[]; sanitizedFileName: string } {
     const sanitizedFileName = sanitizeFileName(fileName);
     const validation = validateWorkflowFile(
       sanitizedFileName,
       fileContent,
-      fileSize
+      fileSize,
     );
 
     return {
@@ -100,12 +100,14 @@ export class WorkflowUploadService {
   async uploadWorkflow(
     session: UserSession,
     file: File,
-    fileName: string
+    fileName: string,
   ): Promise<UploadResult> {
     // Validate GitHub App configuration
     const configValidation = this.githubClient.validateConfiguration();
     if (!configValidation.valid) {
-      throw new Error(configValidation.error || "GitHub App configuration missing");
+      throw new Error(
+        configValidation.error || 'GitHub App configuration missing',
+      );
     }
 
     // Get authenticated Octokit instance
@@ -118,7 +120,7 @@ export class WorkflowUploadService {
     // Validate and sanitize file
     const validation = this.validateFile(fileName, fileContent, fileSize);
     if (!validation.valid) {
-      throw new Error(`Invalid file: ${validation.errors.join(", ")}`);
+      throw new Error(`Invalid file: ${validation.errors.join(', ')}`);
     }
 
     const sanitizedFileName = validation.sanitizedFileName;
@@ -130,7 +132,7 @@ export class WorkflowUploadService {
       REPO_NAME,
       sanitizedFileName,
       fileContent,
-      DEFAULT_BRANCH
+      DEFAULT_BRANCH,
     );
 
     return {
@@ -149,12 +151,14 @@ export class WorkflowUploadService {
    */
   async triggerRegistration(
     session: UserSession,
-    fileName: string
+    fileName: string,
   ): Promise<RegistrationResult> {
     // Validate GitHub App configuration
     const configValidation = this.githubClient.validateConfiguration();
     if (!configValidation.valid) {
-      throw new Error(configValidation.error || "GitHub App configuration missing");
+      throw new Error(
+        configValidation.error || 'GitHub App configuration missing',
+      );
     }
 
     // Get authenticated Octokit instance
@@ -173,7 +177,7 @@ export class WorkflowUploadService {
         DEFAULT_BRANCH,
         {
           workflow_file: fileName,
-        }
+        },
       );
 
       // Try to get the workflow run ID (may not be immediately available)
@@ -192,12 +196,12 @@ export class WorkflowUploadService {
         }
       } catch (error) {
         // If we can't get the run ID, that's okay - it might not be available yet
-        console.error("Failed to get workflow run ID:", error);
+        console.error('Failed to get workflow run ID:', error);
       }
     } catch (error) {
       // If workflow dispatch fails, still return success
       // The workflow might not exist yet or there might be a temporary issue
-      console.error("Workflow dispatch failed:", error);
+      console.error('Workflow dispatch failed:', error);
     }
 
     return {
@@ -206,4 +210,3 @@ export class WorkflowUploadService {
     };
   }
 }
-

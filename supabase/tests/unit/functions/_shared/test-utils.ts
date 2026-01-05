@@ -4,12 +4,12 @@
  * Provides reusable mocks and utilities for testing Supabase Edge Functions
  */
 
-import { Octokit, App } from "../../../../functions/_shared/deps.ts";
+import { App, Octokit } from '../../../../functions/_shared/deps.ts';
 import type {
   GitHubInstallation,
   RepositoryFork,
   UserSession,
-} from "../../../../functions/_shared/types.ts";
+} from '../../../../functions/_shared/types.ts';
 
 // ============================================================================
 // 1. Octokit Mock Factory
@@ -17,24 +17,44 @@ import type {
 
 export interface MockOctokitConfig {
   repos?: {
-    get?: (params: { owner: string; repo: string }) => Promise<{
-      data: {
-        fork?: boolean;
-        parent?: { owner: { login: string }; name: string };
-        html_url?: string;
-        default_branch?: string;
-        created_at?: string;
+    get?: (params: { owner: string; repo: string }) =>
+      | Promise<{
+        data: {
+          fork?: boolean;
+          parent?: { owner: { login: string }; name: string };
+          html_url?: string;
+          default_branch?: string;
+          created_at?: string;
+        };
+      }>
+      | {
+        data: {
+          fork?: boolean;
+          parent?: { owner: { login: string }; name: string };
+          html_url?: string;
+          default_branch?: string;
+          created_at?: string;
+        };
       };
-    }> | { data: { fork?: boolean; parent?: { owner: { login: string }; name: string }; html_url?: string; default_branch?: string; created_at?: string } };
-    createFork?: (params: { owner: string; repo: string }) => Promise<{
-      data: {
-        fork: boolean;
-        parent: { owner: { login: string }; name: string };
-        html_url: string;
-        default_branch: string;
-        created_at: string;
+    createFork?: (params: { owner: string; repo: string }) =>
+      | Promise<{
+        data: {
+          fork: boolean;
+          parent: { owner: { login: string }; name: string };
+          html_url: string;
+          default_branch: string;
+          created_at: string;
+        };
+      }>
+      | {
+        data: {
+          fork: boolean;
+          parent: { owner: { login: string }; name: string };
+          html_url: string;
+          default_branch: string;
+          created_at: string;
+        };
       };
-    }> | { data: { fork: boolean; parent: { owner: { login: string }; name: string }; html_url: string; default_branch: string; created_at: string } };
     getContent?: (params: {
       owner: string;
       repo: string;
@@ -49,7 +69,9 @@ export interface MockOctokitConfig {
       content: string;
       branch: string;
       sha?: string;
-    }) => Promise<{ data: { commit: { sha: string } } }> | { data: { commit: { sha: string } } };
+    }) => Promise<{ data: { commit: { sha: string } } }> | {
+      data: { commit: { sha: string } };
+    };
   };
   actions?: {
     createWorkflowDispatch?: (params: {
@@ -63,52 +85,61 @@ export interface MockOctokitConfig {
       owner: string;
       repo: string;
       run_id: number;
-    }) => Promise<{
-      data: {
-        status: string;
-        conclusion: string | null;
-        html_url: string;
-        created_at: string;
+    }) =>
+      | Promise<{
+        data: {
+          status: string;
+          conclusion: string | null;
+          html_url: string;
+          created_at: string;
+        };
+      }>
+      | {
+        data: {
+          status: string;
+          conclusion: string | null;
+          html_url: string;
+          created_at: string;
+        };
       };
-    }> | {
-      data: {
-        status: string;
-        conclusion: string | null;
-        html_url: string;
-        created_at: string;
-      };
-    };
     listWorkflowRuns?: (params: {
       owner: string;
       repo: string;
       workflow_id: string;
       per_page?: number;
-    }) => Promise<{
-      data: {
-        workflow_runs: Array<{
-          id: number;
-          html_url: string;
-          status: string;
-          conclusion: string | null;
-          created_at: string;
-        }>;
+    }) =>
+      | Promise<{
+        data: {
+          workflow_runs: Array<{
+            id: number;
+            html_url: string;
+            status: string;
+            conclusion: string | null;
+            created_at: string;
+          }>;
+        };
+      }>
+      | {
+        data: {
+          workflow_runs: Array<{
+            id: number;
+            html_url: string;
+            status: string;
+            conclusion: string | null;
+            created_at: string;
+          }>;
+        };
       };
-    }> | {
-      data: {
-        workflow_runs: Array<{
-          id: number;
-          html_url: string;
-          status: string;
-          conclusion: string | null;
-          created_at: string;
-        }>;
-      };
-    };
   };
-  auth?: () => Promise<{ token: string; expiresAt: string }> | { token: string; expiresAt: string };
-  request?: (route: string, options?: Record<string, unknown>) => Promise<{
-    data: unknown;
-  }> | { data: unknown };
+  auth?: () => Promise<{ token: string; expiresAt: string }> | {
+    token: string;
+    expiresAt: string;
+  };
+  request?: (route: string, options?: Record<string, unknown>) =>
+    | Promise<{
+      data: unknown;
+    }>
+    | { data: unknown };
 }
 
 export interface MockOctokitCallTracker {
@@ -128,7 +159,7 @@ export interface MockOctokitCallTracker {
 }
 
 export function createMockOctokit(
-  config: MockOctokitConfig = {}
+  config: MockOctokitConfig = {},
 ): { octokit: Octokit; tracker: MockOctokitCallTracker } {
   const tracker: MockOctokitCallTracker = {
     repos: {
@@ -246,7 +277,7 @@ export function createMockOctokit(
         const result = config.auth();
         return result instanceof Promise ? await result : result;
       }
-      return { token: "mock-token", expiresAt: new Date().toISOString() };
+      return { token: 'mock-token', expiresAt: new Date().toISOString() };
     },
     request: async (route: string, options?: Record<string, unknown>) => {
       tracker.request++;
@@ -267,13 +298,16 @@ export function createMockOctokit(
 
 export interface MockAppConfig {
   getInstallationOctokit?: (
-    installationId: number
+    installationId: number,
   ) => Promise<Octokit> | Octokit;
-  auth?: () => Promise<{ token: string; expiresAt: string }> | { token: string; expiresAt: string };
+  auth?: () => Promise<{ token: string; expiresAt: string }> | {
+    token: string;
+    expiresAt: string;
+  };
 }
 
 export function createMockApp(
-  config: MockAppConfig = {}
+  config: MockAppConfig = {},
 ): App {
   const mockApp = {
     getInstallationOctokit: async (installationId: number) => {
@@ -290,7 +324,7 @@ export function createMockApp(
         const result = config.auth();
         return result instanceof Promise ? await result : result;
       }
-      return { token: "mock-token", expiresAt: new Date().toISOString() };
+      return { token: 'mock-token', expiresAt: new Date().toISOString() };
     },
   } as unknown as App;
 
@@ -306,7 +340,7 @@ export interface MockJWTConfig {
   verify?: (
     token: string,
     secret: string,
-    options?: unknown
+    options?: unknown,
   ) => unknown | null;
 }
 
@@ -352,7 +386,7 @@ export function restoreEnvState(state: EnvState): void {
 
 export async function withEnvState<T>(
   keys: string[],
-  fn: () => T | Promise<T>
+  fn: () => T | Promise<T>,
 ): Promise<T> {
   const saved = saveEnvState(keys);
   try {
@@ -367,47 +401,47 @@ export async function withEnvState<T>(
 // ============================================================================
 
 export function createTestGitHubInstallation(
-  overrides?: Partial<GitHubInstallation>
+  overrides?: Partial<GitHubInstallation>,
 ): GitHubInstallation {
   return {
     id: 123456,
     account: {
-      login: "testuser",
+      login: 'testuser',
       id: 1,
-      avatar_url: "https://github.com/images/error/testuser_happy.gif",
+      avatar_url: 'https://github.com/images/error/testuser_happy.gif',
     },
     permissions: {
-      contents: "write",
-      actions: "write",
-      metadata: "read",
+      contents: 'write',
+      actions: 'write',
+      metadata: 'read',
     },
     ...overrides,
   };
 }
 
 export function createTestRepositoryFork(
-  overrides?: Partial<RepositoryFork>
+  overrides?: Partial<RepositoryFork>,
 ): RepositoryFork {
   return {
-    owner: "testuser",
-    repoName: "FaaSr-workflow",
-    forkUrl: "https://github.com/testuser/FaaSr-workflow",
-    forkStatus: "exists",
-    defaultBranch: "main",
-    createdAt: new Date("2025-01-01T00:00:00Z"),
+    owner: 'testuser',
+    repoName: 'FaaSr-workflow',
+    forkUrl: 'https://github.com/testuser/FaaSr-workflow',
+    forkStatus: 'exists',
+    defaultBranch: 'main',
+    createdAt: new Date('2025-01-01T00:00:00Z'),
     ...overrides,
   };
 }
 
 export function createTestUserSession(
-  overrides?: Partial<UserSession>
+  overrides?: Partial<UserSession>,
 ): UserSession {
   return {
-    installationId: "123456",
-    userLogin: "testuser",
+    installationId: '123456',
+    userLogin: 'testuser',
     userId: 1,
-    avatarUrl: "https://github.com/images/error/testuser_happy.gif",
-    jwtToken: "mock-jwt-token",
+    avatarUrl: 'https://github.com/images/error/testuser_happy.gif',
+    jwtToken: 'mock-jwt-token',
     createdAt: new Date(),
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     ...overrides,
@@ -418,7 +452,7 @@ export function createTestUserSession(
 // 7. GitHub Client Service Mock Factory
 // ============================================================================
 
-import { GitHubClientService } from "../../../../functions/_shared/github-client.ts";
+import { GitHubClientService } from '../../../../functions/_shared/github-client.ts';
 
 export interface MockGitHubClientServiceConfig {
   getCredentials?: () => { appId: string; privateKey: string } | null;
@@ -427,14 +461,14 @@ export interface MockGitHubClientServiceConfig {
 }
 
 export function createMockGitHubClientService(
-  config: MockGitHubClientServiceConfig = {}
+  config: MockGitHubClientServiceConfig = {},
 ): GitHubClientService {
   const mockService = {
     getCredentials: () => {
       if (config.getCredentials) {
         return config.getCredentials();
       }
-      return { appId: "test-app-id", privateKey: "test-private-key" };
+      return { appId: 'test-app-id', privateKey: 'test-private-key' };
     },
     validateConfiguration: () => {
       if (config.validateConfiguration) {
@@ -458,33 +492,33 @@ export function createMockGitHubClientService(
 // 8. Workflow Upload Service Mock Factory
 // ============================================================================
 
-import { WorkflowUploadService } from "../../../../functions/_shared/workflow-upload-service.ts";
+import { WorkflowUploadService } from '../../../../functions/_shared/workflow-upload-service.ts';
 
 export interface MockWorkflowUploadServiceConfig {
   validateFile?: (
     fileName: string,
     fileContent: string,
-    fileSize: number
+    fileSize: number,
   ) => { valid: boolean; errors: string[]; sanitizedFileName: string };
   uploadWorkflow?: (
     session: UserSession,
     file: File,
-    fileName: string
+    fileName: string,
   ) => Promise<{ fileName: string; commitSha: string }>;
   triggerRegistration?: (
     session: UserSession,
-    fileName: string
+    fileName: string,
   ) => Promise<{ workflowRunId?: number; workflowRunUrl?: string }>;
 }
 
 export function createMockWorkflowUploadService(
-  config: MockWorkflowUploadServiceConfig = {}
+  config: MockWorkflowUploadServiceConfig = {},
 ): WorkflowUploadService {
   const mockService = {
     validateFile: (
       fileName: string,
       fileContent: string,
-      fileSize: number
+      fileSize: number,
     ) => {
       if (config.validateFile) {
         return config.validateFile(fileName, fileContent, fileSize);
@@ -498,26 +532,26 @@ export function createMockWorkflowUploadService(
     uploadWorkflow: async (
       session: UserSession,
       file: File,
-      fileName: string
+      fileName: string,
     ) => {
       if (config.uploadWorkflow) {
         return await config.uploadWorkflow(session, file, fileName);
       }
       return {
-        fileName: "test-workflow.json",
-        commitSha: "abc123",
+        fileName: 'test-workflow.json',
+        commitSha: 'abc123',
       };
     },
     triggerRegistration: async (
       session: UserSession,
-      fileName: string
+      fileName: string,
     ) => {
       if (config.triggerRegistration) {
         return await config.triggerRegistration(session, fileName);
       }
       return {
         workflowRunId: 123,
-        workflowRunUrl: "https://github.com/test/workflows/runs/123",
+        workflowRunUrl: 'https://github.com/test/workflows/runs/123',
       };
     },
   } as unknown as WorkflowUploadService;
@@ -529,15 +563,15 @@ export function createMockWorkflowUploadService(
 // 9. Workflow Status Service Mock Factory
 // ============================================================================
 
-import { WorkflowStatusService } from "../../../../functions/_shared/workflow-status-service.ts";
+import { WorkflowStatusService } from '../../../../functions/_shared/workflow-status-service.ts';
 
 export interface MockWorkflowStatusServiceConfig {
   getWorkflowStatus?: (
     session: UserSession,
-    fileName: string
+    fileName: string,
   ) => Promise<{
     fileName: string;
-    status: "pending" | "running" | "success" | "failed";
+    status: 'pending' | 'running' | 'success' | 'failed';
     workflowRunId: number;
     workflowRunUrl: string;
     errorMessage?: string | null;
@@ -547,7 +581,7 @@ export interface MockWorkflowStatusServiceConfig {
 }
 
 export function createMockWorkflowStatusService(
-  config: MockWorkflowStatusServiceConfig = {}
+  config: MockWorkflowStatusServiceConfig = {},
 ): WorkflowStatusService {
   const mockService = {
     getWorkflowStatus: async (session: UserSession, fileName: string) => {
@@ -555,10 +589,10 @@ export function createMockWorkflowStatusService(
         return await config.getWorkflowStatus(session, fileName);
       }
       return {
-        fileName: "test-workflow.json",
-        status: "success" as const,
+        fileName: 'test-workflow.json',
+        status: 'success' as const,
         workflowRunId: 123,
-        workflowRunUrl: "https://github.com/test/workflows/runs/123",
+        workflowRunUrl: 'https://github.com/test/workflows/runs/123',
         errorMessage: null,
         triggeredAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
@@ -581,10 +615,10 @@ export interface MockRequestConfig {
 }
 
 export function createMockRequest(
-  config: MockRequestConfig = {}
+  config: MockRequestConfig = {},
 ): Request {
-  const method = config.method || "GET";
-  const url = config.url || "https://example.com";
+  const method = config.method || 'GET';
+  const url = config.url || 'https://example.com';
   const headers = config.headers || {};
 
   let headersObj: Headers;
@@ -603,4 +637,3 @@ export function createMockRequest(
     body: config.body,
   });
 }
-

@@ -6,15 +6,15 @@
  * - Creating a new fork of the FaaSr-workflow repository
  */
 
-import { Octokit } from "./deps.ts";
-import type { RepositoryFork } from "./types.ts";
+import { Octokit } from './deps.ts';
+import type { RepositoryFork } from './types.ts';
 
 /**
  * Source repository configuration
  */
 const SOURCE_REPO = {
-  owner: "FaaSr",
-  name: "FaaSr-workflow",
+  owner: 'FaaSr',
+  name: 'FaaSr-workflow',
 };
 
 /**
@@ -26,7 +26,7 @@ const SOURCE_REPO = {
  */
 export async function checkForkExists(
   octokit: Octokit,
-  userLogin: string
+  userLogin: string,
 ): Promise<RepositoryFork | null> {
   try {
     const response = await octokit.rest.repos.get({
@@ -45,8 +45,8 @@ export async function checkForkExists(
           owner: userLogin,
           repoName: SOURCE_REPO.name,
           forkUrl: response.data.html_url,
-          forkStatus: "exists",
-          defaultBranch: response.data.default_branch || "main",
+          forkStatus: 'exists',
+          defaultBranch: response.data.default_branch || 'main',
           createdAt: response.data.created_at
             ? new Date(response.data.created_at)
             : undefined,
@@ -57,7 +57,7 @@ export async function checkForkExists(
     return null;
   } catch (error: unknown) {
     // Repository doesn't exist or is not accessible
-    if (error && typeof error === "object" && "status" in error) {
+    if (error && typeof error === 'object' && 'status' in error) {
       const status = error.status as number;
       if (status === 404) {
         return null;
@@ -68,7 +68,7 @@ export async function checkForkExists(
       throw error;
     }
     throw new Error(
-      `Failed to check fork existence: ${JSON.stringify(error)}`
+      `Failed to check fork existence: ${JSON.stringify(error)}`,
     );
   }
 }
@@ -90,7 +90,7 @@ export async function pollUntilForkReady(
   octokit: Octokit,
   userLogin: string,
   maxAttempts: number = 30,
-  delayMs: number = 1000
+  delayMs: number = 1000,
 ): Promise<RepositoryFork> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const fork = await checkForkExists(octokit, userLogin);
@@ -108,11 +108,9 @@ export async function pollUntilForkReady(
 
   // Fork still not ready after all attempts
   throw new Error(
-    `Fork for ${userLogin}/${
-      SOURCE_REPO.name
-    } is not ready after ${maxAttempts} attempts (${
+    `Fork for ${userLogin}/${SOURCE_REPO.name} is not ready after ${maxAttempts} attempts (${
       (maxAttempts * delayMs) / 1000
-    }s)`
+    }s)`,
   );
 }
 
@@ -125,7 +123,7 @@ export async function pollUntilForkReady(
  */
 export async function createFork(
   octokit: Octokit,
-  userLogin: string
+  userLogin: string,
 ): Promise<RepositoryFork> {
   try {
     await octokit.rest.repos.createFork({
@@ -139,12 +137,12 @@ export async function createFork(
 
     return {
       ...fork,
-      forkStatus: "created",
+      forkStatus: 'created',
       createdAt: new Date(),
     };
   } catch (error: unknown) {
     // Check if fork already exists (409 Conflict)
-    if (error && typeof error === "object" && "status" in error) {
+    if (error && typeof error === 'object' && 'status' in error) {
       const status = error.status as number;
       if (status === 403) {
         // Permission denied - might mean fork already exists, try to check
@@ -159,7 +157,7 @@ export async function createFork(
       throw error;
     }
     throw new Error(
-      `Failed to create fork: ${JSON.stringify(error)}`
+      `Failed to create fork: ${JSON.stringify(error)}`,
     );
   }
 }
@@ -173,7 +171,7 @@ export async function createFork(
  */
 export async function ensureForkExists(
   octokit: Octokit,
-  userLogin: string
+  userLogin: string,
 ): Promise<RepositoryFork> {
   // First check if fork already exists
   const existingFork = await checkForkExists(octokit, userLogin);

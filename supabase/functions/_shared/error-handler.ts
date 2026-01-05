@@ -5,7 +5,7 @@
  * Converts technical errors into user-friendly messages for API responses.
  */
 
-import { corsHeaders } from "./cors.ts";
+import { corsHeaders } from './cors.ts';
 
 /**
  * Format error message to be user-friendly
@@ -16,21 +16,21 @@ import { corsHeaders } from "./cors.ts";
  */
 export function formatErrorMessage(
   error: unknown,
-  defaultMessage: string = "An error occurred"
+  defaultMessage: string = 'An error occurred',
 ): string {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
-    if (message.includes("rate limit")) {
-      return "Too many requests. Please try again in a few minutes.";
+    if (message.includes('rate limit')) {
+      return 'Too many requests. Please try again in a few minutes.';
     }
 
-    if (message.includes("permission")) {
-      return "Permission denied. Please check your GitHub App permissions.";
+    if (message.includes('permission')) {
+      return 'Permission denied. Please check your GitHub App permissions.';
     }
 
-    if (message.includes("not found")) {
-      return "Resource not found. Please check your repository and workflow configuration.";
+    if (message.includes('not found')) {
+      return 'Resource not found. Please check your repository and workflow configuration.';
     }
 
     // Return the original error message if it's already user-friendly
@@ -48,10 +48,10 @@ export function formatErrorMessage(
  */
 export function handleGitHubError(error: unknown): string {
   if (error instanceof Error) {
-    return formatErrorMessage(error, "GitHub API error occurred");
+    return formatErrorMessage(error, 'GitHub API error occurred');
   }
 
-  return "An unexpected error occurred while communicating with GitHub.";
+  return 'An unexpected error occurred while communicating with GitHub.';
 }
 
 /**
@@ -65,7 +65,7 @@ export function handleGitHubError(error: unknown): string {
 export function createErrorResponse(
   error: unknown,
   status: number,
-  defaultMessage: string = "An error occurred"
+  defaultMessage: string = 'An error occurred',
 ): Response {
   const errorMessage = formatErrorMessage(error, defaultMessage);
 
@@ -76,8 +76,8 @@ export function createErrorResponse(
     }),
     {
       status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
   );
 }
 
@@ -88,9 +88,9 @@ export function createErrorResponse(
  */
 export function createAuthErrorResponse(): Response {
   return createErrorResponse(
-    new Error("Authentication required"),
+    new Error('Authentication required'),
     401,
-    "Authentication required"
+    'Authentication required',
   );
 }
 
@@ -103,7 +103,7 @@ export function createAuthErrorResponse(): Response {
  */
 export function createValidationErrorResponse(
   error: string,
-  details?: unknown
+  details?: unknown,
 ): Response {
   const responseBody: Record<string, unknown> = {
     success: false,
@@ -118,8 +118,8 @@ export function createValidationErrorResponse(
     JSON.stringify(responseBody),
     {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
   );
 }
 
@@ -138,8 +138,8 @@ export function createNotFoundErrorResponse(error: string): Response {
     }),
     {
       status: 404,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
   );
 }
 
@@ -158,8 +158,7 @@ export function createConfigurationErrorResponse(error: string): Response {
     }),
     {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
   );
 }
-

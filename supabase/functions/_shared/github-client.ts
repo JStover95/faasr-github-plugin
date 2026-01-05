@@ -5,9 +5,9 @@
  * Eliminates duplication of credential retrieval and authentication logic.
  */
 
-import { Octokit } from "./deps.ts";
-import { getInstallationToken } from "./github-app.ts";
-import type { UserSession } from "./types.ts";
+import { Octokit } from './deps.ts';
+import { getInstallationToken } from './github-app.ts';
+import type { UserSession } from './types.ts';
 
 /**
  * GitHub App credentials
@@ -37,8 +37,8 @@ export class GitHubClientService {
    * @returns Credentials object or null if not configured
    */
   getCredentials(): GitHubCredentials | null {
-    const appId = Deno.env.get("GITHUB_APP_ID");
-    const privateKey = Deno.env.get("GITHUB_PRIVATE_KEY");
+    const appId = Deno.env.get('GITHUB_APP_ID');
+    const privateKey = Deno.env.get('GITHUB_PRIVATE_KEY');
 
     if (!appId || !privateKey) {
       return null;
@@ -58,7 +58,7 @@ export class GitHubClientService {
     if (!credentials) {
       return {
         valid: false,
-        error: "GitHub App configuration missing",
+        error: 'GitHub App configuration missing',
       };
     }
 
@@ -76,16 +76,15 @@ export class GitHubClientService {
     const credentials = this.getCredentials();
 
     if (!credentials) {
-      throw new Error("GitHub App configuration missing");
+      throw new Error('GitHub App configuration missing');
     }
 
     const { token } = await getInstallationToken(
       credentials.appId,
       credentials.privateKey,
-      session.installationId
+      session.installationId,
     );
 
     return new Octokit({ auth: token });
   }
 }
-

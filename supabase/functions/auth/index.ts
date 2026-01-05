@@ -8,44 +8,46 @@
  * - POST /auth/logout - Logs out current session
  */
 
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders } from '../_shared/cors.ts';
 import {
-  getInstallation,
   checkInstallationPermissions,
+  getInstallation,
   getInstallationToken,
-} from "../_shared/github-app.ts";
+} from '../_shared/github-app.ts';
 import {
-  createSessionToken,
-  createSessionCookie,
   createLogoutCookie,
+  createSessionCookie,
+  createSessionToken,
   getSessionFromRequest,
-} from "../_shared/auth.ts";
-import { ensureForkExists } from "../_shared/repository.ts";
-import { Octokit } from "../_shared/deps.ts";
-import type { UserSession } from "../_shared/types.ts";
+} from '../_shared/auth.ts';
+import { ensureForkExists } from '../_shared/repository.ts';
+import { Octokit } from '../_shared/deps.ts';
+import type { UserSession } from '../_shared/types.ts';
 
 /**
  * Handle GET /auth/install - Initiate GitHub App installation
  */
 function handleInstall(_req: Request): Response {
-  const clientId = Deno.env.get("GITHUB_CLIENT_ID");
+  const clientId = Deno.env.get('GITHUB_CLIENT_ID');
   if (!clientId) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: "GitHub App client ID not configured",
+        error: 'GitHub App client ID not configured',
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
 
   // Build GitHub App installation URL
-  const githubInstallUrl = new URL("https://github.com/apps/faasr/installations/new");
-  githubInstallUrl.searchParams.set("state", "install");
-  
+  const githubInstallUrl = new URL(
+    'https://github.com/apps/faasr/installations/new',
+  );
+  githubInstallUrl.searchParams.set('state', 'install');
+
   // Redirect to GitHub App installation page
   return new Response(null, {
     status: 302,
@@ -62,70 +64,81 @@ function handleInstall(_req: Request): Response {
 async function handleCallback(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
-    const installationId = url.searchParams.get("installation_id");
+    const installationId = url.searchParams.get('installation_id');
 
     if (!installationId) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing installation_id parameter",
+          error: 'Missing installation_id parameter',
         }),
         {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
 
-    const appId = Deno.env.get("GITHUB_APP_ID");
-    const privateKey = Deno.env.get("GITHUB_PRIVATE_KEY");
+    const appId = Deno.env.get('GITHUB_APP_ID');
+    const privateKey = Deno.env.get('GITHUB_PRIVATE_KEY');
 
     if (!appId || !privateKey) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "GitHub App configuration missing",
+          error: 'GitHub App configuration missing',
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
 
     // Get installation information
-    const installation = await getInstallation(appId, privateKey, installationId);
+    const installation = await getInstallation(
+      appId,
+      privateKey,
+      installationId,
+    );
 
     // Validate permissions
     const permissionCheck = await checkInstallationPermissions(
       appId,
       privateKey,
-      installationId
+      installationId,
     );
 
     if (!permissionCheck.valid) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required permissions",
+          error: 'Missing required permissions',
           details: permissionCheck.missingPermissions,
         }),
         {
           status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
 
     // Get installation token for API operations
-    const { token } = await getInstallationToken(appId, privateKey, installationId);
+    const { token } = await getInstallationToken(
+      appId,
+      privateKey,
+      installationId,
+    );
     const octokit = new Octokit({ auth: token });
 
     // Ensure fork exists
     const fork = await ensureForkExists(octokit, installation.account.login);
 
     // Create session
-    const sessionData: Omit<UserSession, "jwtToken" | "createdAt" | "expiresAt"> = {
+    const sessionData: Omit<
+      UserSession,
+      'jwtToken' | 'createdAt' | 'expiresAt'
+    > = {
       installationId,
       userLogin: installation.account.login,
       userId: installation.account.id,
@@ -139,7 +152,7 @@ async function handleCallback(req: Request): Promise<Response> {
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Installation successful",
+        message: 'Installation successful',
         user: {
           login: installation.account.login,
           id: installation.account.id,
@@ -156,23 +169,24 @@ async function handleCallback(req: Request): Promise<Response> {
         status: 200,
         headers: {
           ...corsHeaders,
-          "Content-Type": "application/json",
-          "Set-Cookie": cookie,
+          'Content-Type': 'application/json',
+          'Set-Cookie': cookie,
         },
-      }
+      },
     );
   } catch (error) {
-    console.error("Callback error:", error);
+    console.error('Callback error:', error);
 
     // Provide user-friendly error messages
-    let errorMessage = "Installation failed";
+    let errorMessage = 'Installation failed';
     if (error instanceof Error) {
-      if (error.message.includes("rate limit")) {
-        errorMessage = "Too many requests. Please try again in a few minutes.";
-      } else if (error.message.includes("permission")) {
-        errorMessage = "The app needs additional permissions. Please reinstall.";
-      } else if (error.message.includes("not found")) {
-        errorMessage = "Fork not found. Please try installing again.";
+      if (error.message.includes('rate limit')) {
+        errorMessage = 'Too many requests. Please try again in a few minutes.';
+      } else if (error.message.includes('permission')) {
+        errorMessage =
+          'The app needs additional permissions. Please reinstall.';
+      } else if (error.message.includes('not found')) {
+        errorMessage = 'Fork not found. Please try installing again.';
       } else {
         errorMessage = error.message;
       }
@@ -185,8 +199,8 @@ async function handleCallback(req: Request): Promise<Response> {
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
 }
@@ -204,8 +218,8 @@ function handleGetSession(req: Request): Response {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
 
@@ -220,8 +234,8 @@ function handleGetSession(req: Request): Response {
     }),
     {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
   );
 }
 
@@ -234,16 +248,16 @@ function handleLogout(_req: Request): Response {
   return new Response(
     JSON.stringify({
       success: true,
-      message: "Logged out successfully",
+      message: 'Logged out successfully',
     }),
     {
       status: 200,
       headers: {
         ...corsHeaders,
-        "Content-Type": "application/json",
-        "Set-Cookie": logoutCookie,
+        'Content-Type': 'application/json',
+        'Set-Cookie': logoutCookie,
       },
-    }
+    },
   );
 }
 
@@ -252,7 +266,7 @@ function handleLogout(_req: Request): Response {
  */
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -263,38 +277,37 @@ Deno.serve(async (req: Request) => {
 
   try {
     // Route to appropriate handler
-    if (path === "/auth/install" && req.method === "GET") {
+    if (path === '/auth/install' && req.method === 'GET') {
       return handleInstall(req);
-    } else if (path === "/auth/callback" && req.method === "GET") {
+    } else if (path === '/auth/callback' && req.method === 'GET') {
       return await handleCallback(req);
-    } else if (path === "/auth/session" && req.method === "GET") {
+    } else if (path === '/auth/session' && req.method === 'GET') {
       return handleGetSession(req);
-    } else if (path === "/auth/logout" && req.method === "POST") {
+    } else if (path === '/auth/logout' && req.method === 'POST') {
       return handleLogout(req);
     } else {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Not found",
+          error: 'Not found',
         }),
         {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
       );
     }
   } catch (error) {
-    console.error("Edge Function error:", error);
+    console.error('Edge Function error:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Internal server error",
+        error: 'Internal server error',
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
     );
   }
 });
-

@@ -2,30 +2,30 @@
  * Tests for repository utilities (fork detection and creation)
  */
 
-import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.16";
+import { assertEquals, assertRejects } from 'jsr:@std/assert@1.0.16';
 import {
   checkForkExists,
   createFork,
   ensureForkExists,
   pollUntilForkReady,
-} from "../../../../functions/_shared/repository.ts";
-import { createMockOctokit } from "./test-utils.ts";
+} from '../../../../functions/_shared/repository.ts';
+import { createMockOctokit } from './test-utils.ts';
 
-Deno.test("checkForkExists returns fork info when fork exists", async () => {
+Deno.test('checkForkExists returns fork info when fork exists', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: (params: { owner: string; repo: string }) => {
-        if (params.owner === "testuser" && params.repo === "FaaSr-workflow") {
+        if (params.owner === 'testuser' && params.repo === 'FaaSr-workflow') {
           return {
             data: {
               fork: true,
               parent: {
-                owner: { login: "FaaSr" },
-                name: "FaaSr-workflow",
+                owner: { login: 'FaaSr' },
+                name: 'FaaSr-workflow',
               },
-              html_url: "https://github.com/testuser/FaaSr-workflow",
-              default_branch: "main",
-              created_at: "2025-01-01T00:00:00Z",
+              html_url: 'https://github.com/testuser/FaaSr-workflow',
+              default_branch: 'main',
+              created_at: '2025-01-01T00:00:00Z',
             },
           };
         }
@@ -34,17 +34,17 @@ Deno.test("checkForkExists returns fork info when fork exists", async () => {
     },
   });
 
-  const fork = await checkForkExists(octokit, "testuser");
+  const fork = await checkForkExists(octokit, 'testuser');
 
   assertEquals(fork !== null, true);
   if (fork) {
-    assertEquals(fork.owner, "testuser");
-    assertEquals(fork.repoName, "FaaSr-workflow");
-    assertEquals(fork.forkStatus, "exists");
+    assertEquals(fork.owner, 'testuser');
+    assertEquals(fork.repoName, 'FaaSr-workflow');
+    assertEquals(fork.forkStatus, 'exists');
   }
 });
 
-Deno.test("checkForkExists returns null when fork does not exist", async () => {
+Deno.test('checkForkExists returns null when fork does not exist', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => {
@@ -53,44 +53,44 @@ Deno.test("checkForkExists returns null when fork does not exist", async () => {
     },
   });
 
-  const fork = await checkForkExists(octokit, "nonexistentuser");
+  const fork = await checkForkExists(octokit, 'nonexistentuser');
 
   assertEquals(fork, null);
 });
 
-Deno.test("createFork creates fork successfully", async () => {
+Deno.test('createFork creates fork successfully', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: (params: { owner: string; repo: string }) => {
         // After fork is created, get should return the fork (for polling)
-        if (params.owner === "testuser" && params.repo === "FaaSr-workflow") {
+        if (params.owner === 'testuser' && params.repo === 'FaaSr-workflow') {
           return {
             data: {
               fork: true,
               parent: {
-                owner: { login: "FaaSr" },
-                name: "FaaSr-workflow",
+                owner: { login: 'FaaSr' },
+                name: 'FaaSr-workflow',
               },
-              html_url: "https://github.com/testuser/FaaSr-workflow",
-              default_branch: "main",
-              created_at: "2025-01-01T00:00:00Z",
+              html_url: 'https://github.com/testuser/FaaSr-workflow',
+              default_branch: 'main',
+              created_at: '2025-01-01T00:00:00Z',
             },
           };
         }
         throw { status: 404 };
       },
       createFork: (params: { owner: string; repo: string }) => {
-        if (params.owner === "FaaSr" && params.repo === "FaaSr-workflow") {
+        if (params.owner === 'FaaSr' && params.repo === 'FaaSr-workflow') {
           return {
             data: {
               fork: true,
               parent: {
-                owner: { login: "FaaSr" },
-                name: "FaaSr-workflow",
+                owner: { login: 'FaaSr' },
+                name: 'FaaSr-workflow',
               },
-              html_url: "https://github.com/testuser/FaaSr-workflow",
-              default_branch: "main",
-              created_at: "2025-01-01T00:00:00Z",
+              html_url: 'https://github.com/testuser/FaaSr-workflow',
+              default_branch: 'main',
+              created_at: '2025-01-01T00:00:00Z',
             },
           };
         }
@@ -99,27 +99,27 @@ Deno.test("createFork creates fork successfully", async () => {
     },
   });
 
-  const fork = await createFork(octokit, "testuser");
-  assertEquals(fork.owner, "testuser");
-  assertEquals(fork.repoName, "FaaSr-workflow");
-  assertEquals(fork.forkStatus, "created");
+  const fork = await createFork(octokit, 'testuser');
+  assertEquals(fork.owner, 'testuser');
+  assertEquals(fork.repoName, 'FaaSr-workflow');
+  assertEquals(fork.forkStatus, 'created');
 });
 
-Deno.test("ensureForkExists returns existing fork if it exists", async () => {
+Deno.test('ensureForkExists returns existing fork if it exists', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: (params: { owner: string; repo: string }) => {
-        if (params.owner === "testuser" && params.repo === "FaaSr-workflow") {
+        if (params.owner === 'testuser' && params.repo === 'FaaSr-workflow') {
           return {
             data: {
               fork: true,
               parent: {
-                owner: { login: "FaaSr" },
-                name: "FaaSr-workflow",
+                owner: { login: 'FaaSr' },
+                name: 'FaaSr-workflow',
               },
-              html_url: "https://github.com/testuser/FaaSr-workflow",
-              default_branch: "main",
-              created_at: "2025-01-01T00:00:00Z",
+              html_url: 'https://github.com/testuser/FaaSr-workflow',
+              default_branch: 'main',
+              created_at: '2025-01-01T00:00:00Z',
             },
           };
         }
@@ -128,15 +128,15 @@ Deno.test("ensureForkExists returns existing fork if it exists", async () => {
     },
   });
 
-  const fork = await ensureForkExists(octokit, "testuser");
+  const fork = await ensureForkExists(octokit, 'testuser');
 
   assertEquals(fork !== null, true);
   if (fork) {
-    assertEquals(fork.owner, "testuser");
+    assertEquals(fork.owner, 'testuser');
   }
 });
 
-Deno.test("ensureForkExists creates fork if it does not exist", async () => {
+Deno.test('ensureForkExists creates fork if it does not exist', async () => {
   let checkCallCount = 0;
   const { octokit } = createMockOctokit({
     repos: {
@@ -150,12 +150,12 @@ Deno.test("ensureForkExists creates fork if it does not exist", async () => {
           data: {
             fork: true,
             parent: {
-              owner: { login: "FaaSr" },
-              name: "FaaSr-workflow",
+              owner: { login: 'FaaSr' },
+              name: 'FaaSr-workflow',
             },
-            html_url: "https://github.com/newuser/FaaSr-workflow",
-            default_branch: "main",
-            created_at: "2025-01-01T00:00:00Z",
+            html_url: 'https://github.com/newuser/FaaSr-workflow',
+            default_branch: 'main',
+            created_at: '2025-01-01T00:00:00Z',
           },
         };
       },
@@ -164,52 +164,52 @@ Deno.test("ensureForkExists creates fork if it does not exist", async () => {
           data: {
             fork: true,
             parent: {
-              owner: { login: "FaaSr" },
-              name: "FaaSr-workflow",
+              owner: { login: 'FaaSr' },
+              name: 'FaaSr-workflow',
             },
-            html_url: "https://github.com/newuser/FaaSr-workflow",
-            default_branch: "main",
-            created_at: "2025-01-01T00:00:00Z",
+            html_url: 'https://github.com/newuser/FaaSr-workflow',
+            default_branch: 'main',
+            created_at: '2025-01-01T00:00:00Z',
           },
         };
       },
     },
   });
 
-  const fork = await ensureForkExists(octokit, "newuser");
-  assertEquals(fork.owner, "newuser");
-  assertEquals(fork.repoName, "FaaSr-workflow");
+  const fork = await ensureForkExists(octokit, 'newuser');
+  assertEquals(fork.owner, 'newuser');
+  assertEquals(fork.repoName, 'FaaSr-workflow');
 });
 
 // ============================================================================
 // Tests for pollUntilForkReady
 // ============================================================================
 
-Deno.test("pollUntilForkReady - success on first attempt", async () => {
+Deno.test('pollUntilForkReady - success on first attempt', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => ({
         data: {
           fork: true,
           parent: {
-            owner: { login: "FaaSr" },
-            name: "FaaSr-workflow",
+            owner: { login: 'FaaSr' },
+            name: 'FaaSr-workflow',
           },
-          html_url: "https://github.com/testuser/FaaSr-workflow",
-          default_branch: "main",
-          created_at: "2025-01-01T00:00:00Z",
+          html_url: 'https://github.com/testuser/FaaSr-workflow',
+          default_branch: 'main',
+          created_at: '2025-01-01T00:00:00Z',
         },
       }),
     },
   });
 
-  const fork = await pollUntilForkReady(octokit, "testuser", 30, 1000);
-  assertEquals(fork.owner, "testuser");
-  assertEquals(fork.repoName, "FaaSr-workflow");
-  assertEquals(fork.forkStatus, "exists");
+  const fork = await pollUntilForkReady(octokit, 'testuser', 30, 1000);
+  assertEquals(fork.owner, 'testuser');
+  assertEquals(fork.repoName, 'FaaSr-workflow');
+  assertEquals(fork.forkStatus, 'exists');
 });
 
-Deno.test("pollUntilForkReady - success after multiple attempts", async () => {
+Deno.test('pollUntilForkReady - success after multiple attempts', async () => {
   let attemptCount = 0;
   const { octokit } = createMockOctokit({
     repos: {
@@ -222,24 +222,24 @@ Deno.test("pollUntilForkReady - success after multiple attempts", async () => {
           data: {
             fork: true,
             parent: {
-              owner: { login: "FaaSr" },
-              name: "FaaSr-workflow",
+              owner: { login: 'FaaSr' },
+              name: 'FaaSr-workflow',
             },
-            html_url: "https://github.com/testuser/FaaSr-workflow",
-            default_branch: "main",
-            created_at: "2025-01-01T00:00:00Z",
+            html_url: 'https://github.com/testuser/FaaSr-workflow',
+            default_branch: 'main',
+            created_at: '2025-01-01T00:00:00Z',
           },
         };
       },
     },
   });
 
-  const fork = await pollUntilForkReady(octokit, "testuser", 5, 1);
-  assertEquals(fork.owner, "testuser");
+  const fork = await pollUntilForkReady(octokit, 'testuser', 5, 1);
+  assertEquals(fork.owner, 'testuser');
   assertEquals(attemptCount, 3);
 });
 
-Deno.test("pollUntilForkReady - timeout after max attempts", async () => {
+Deno.test('pollUntilForkReady - timeout after max attempts', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => {
@@ -250,10 +250,10 @@ Deno.test("pollUntilForkReady - timeout after max attempts", async () => {
 
   await assertRejects(
     async () => {
-      await pollUntilForkReady(octokit, "testuser", 3, 1);
+      await pollUntilForkReady(octokit, 'testuser', 3, 1);
     },
     Error,
-    "is not ready after 3 attempts"
+    'is not ready after 3 attempts',
   );
 });
 
@@ -261,7 +261,7 @@ Deno.test("pollUntilForkReady - timeout after max attempts", async () => {
 // Tests for checkForkExists error handling
 // ============================================================================
 
-Deno.test("checkForkExists - non-404 error throws", async () => {
+Deno.test('checkForkExists - non-404 error throws', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => {
@@ -271,14 +271,14 @@ Deno.test("checkForkExists - non-404 error throws", async () => {
   });
 
   await assertRejects(
-    async () => await checkForkExists(octokit, "testuser"),
+    async () => await checkForkExists(octokit, 'testuser'),
     Error,
     undefined,
-    "Should throw on non-404 error"
+    'Should throw on non-404 error',
   );
 });
 
-Deno.test("checkForkExists - 500 error throws", async () => {
+Deno.test('checkForkExists - 500 error throws', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => {
@@ -288,48 +288,48 @@ Deno.test("checkForkExists - 500 error throws", async () => {
   });
 
   await assertRejects(
-    async () => await checkForkExists(octokit, "testuser"),
+    async () => await checkForkExists(octokit, 'testuser'),
     Error,
     undefined,
-    "Should throw on 500 error"
+    'Should throw on 500 error',
   );
 });
 
-Deno.test("checkForkExists - repository exists but not a fork", async () => {
+Deno.test('checkForkExists - repository exists but not a fork', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => ({
         data: {
           fork: false,
-          html_url: "https://github.com/testuser/FaaSr-workflow",
-          default_branch: "main",
+          html_url: 'https://github.com/testuser/FaaSr-workflow',
+          default_branch: 'main',
         },
       }),
     },
   });
 
-  const fork = await checkForkExists(octokit, "testuser");
+  const fork = await checkForkExists(octokit, 'testuser');
   assertEquals(fork, null);
 });
 
-Deno.test("checkForkExists - repository exists but wrong parent", async () => {
+Deno.test('checkForkExists - repository exists but wrong parent', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => ({
         data: {
           fork: true,
           parent: {
-            owner: { login: "OtherOwner" },
-            name: "OtherRepo",
+            owner: { login: 'OtherOwner' },
+            name: 'OtherRepo',
           },
-          html_url: "https://github.com/testuser/FaaSr-workflow",
-          default_branch: "main",
+          html_url: 'https://github.com/testuser/FaaSr-workflow',
+          default_branch: 'main',
         },
       }),
     },
   });
 
-  const fork = await checkForkExists(octokit, "testuser");
+  const fork = await checkForkExists(octokit, 'testuser');
   assertEquals(fork, null);
 });
 
@@ -337,7 +337,7 @@ Deno.test("checkForkExists - repository exists but wrong parent", async () => {
 // Tests for createFork error handling
 // ============================================================================
 
-Deno.test("createFork - 403 error checks for existing fork", async () => {
+Deno.test('createFork - 403 error checks for existing fork', async () => {
   let checkCalled = false;
   const { octokit } = createMockOctokit({
     repos: {
@@ -347,12 +347,12 @@ Deno.test("createFork - 403 error checks for existing fork", async () => {
           data: {
             fork: true,
             parent: {
-              owner: { login: "FaaSr" },
-              name: "FaaSr-workflow",
+              owner: { login: 'FaaSr' },
+              name: 'FaaSr-workflow',
             },
-            html_url: "https://github.com/testuser/FaaSr-workflow",
-            default_branch: "main",
-            created_at: "2025-01-01T00:00:00Z",
+            html_url: 'https://github.com/testuser/FaaSr-workflow',
+            default_branch: 'main',
+            created_at: '2025-01-01T00:00:00Z',
           },
         };
       },
@@ -362,12 +362,12 @@ Deno.test("createFork - 403 error checks for existing fork", async () => {
     },
   });
 
-  const fork = await createFork(octokit, "testuser");
-  assertEquals(fork.owner, "testuser");
+  const fork = await createFork(octokit, 'testuser');
+  assertEquals(fork.owner, 'testuser');
   assertEquals(checkCalled, true);
 });
 
-Deno.test("createFork - 500 error throws", async () => {
+Deno.test('createFork - 500 error throws', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => {
@@ -380,14 +380,14 @@ Deno.test("createFork - 500 error throws", async () => {
   });
 
   await assertRejects(
-    async () => await createFork(octokit, "testuser"),
+    async () => await createFork(octokit, 'testuser'),
     Error,
     undefined,
-    "Should throw on 500 error"
+    'Should throw on 500 error',
   );
 });
 
-Deno.test("ensureForkExists - fork check fails with non-404 error", async () => {
+Deno.test('ensureForkExists - fork check fails with non-404 error', async () => {
   const { octokit } = createMockOctokit({
     repos: {
       get: () => {
@@ -398,12 +398,12 @@ Deno.test("ensureForkExists - fork check fails with non-404 error", async () => 
           data: {
             fork: true,
             parent: {
-              owner: { login: "FaaSr" },
-              name: "FaaSr-workflow",
+              owner: { login: 'FaaSr' },
+              name: 'FaaSr-workflow',
             },
-            html_url: "https://github.com/testuser/FaaSr-workflow",
-            default_branch: "main",
-            created_at: "2025-01-01T00:00:00Z",
+            html_url: 'https://github.com/testuser/FaaSr-workflow',
+            default_branch: 'main',
+            created_at: '2025-01-01T00:00:00Z',
           },
         };
       },
@@ -412,10 +412,9 @@ Deno.test("ensureForkExists - fork check fails with non-404 error", async () => 
 
   // Should throw because checkForkExists throws on non-404
   await assertRejects(
-    async () => await ensureForkExists(octokit, "testuser"),
+    async () => await ensureForkExists(octokit, 'testuser'),
     Error,
     undefined,
-    "Should throw when check fails with non-404"
+    'Should throw when check fails with non-404',
   );
 });
-

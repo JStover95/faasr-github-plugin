@@ -8,7 +8,7 @@
  * - Retrieving workflow run status
  */
 
-import { Octokit } from "./deps.ts";
+import { Octokit } from './deps.ts';
 
 /**
  * Maximum file size in bytes (1MB for PoC)
@@ -31,28 +31,28 @@ const FILE_NAME_PATTERN = /^[a-zA-Z0-9_-]+\.json$/;
 export function validateWorkflowFile(
   fileName: string,
   fileContent: string,
-  fileSize: number
+  fileSize: number,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // Validate file name
-  if (!fileName || typeof fileName !== "string") {
-    errors.push("File name is required");
+  if (!fileName || typeof fileName !== 'string') {
+    errors.push('File name is required');
   } else {
     // Check for path traversal attempts
-    if (fileName.includes("/") || fileName.includes("\\")) {
-      errors.push("File name cannot contain path separators");
+    if (fileName.includes('/') || fileName.includes('\\')) {
+      errors.push('File name cannot contain path separators');
     }
 
     // Check file extension
-    if (!fileName.endsWith(".json")) {
-      errors.push("File must have .json extension");
+    if (!fileName.endsWith('.json')) {
+      errors.push('File must have .json extension');
     }
 
     // Check file name pattern
     if (!FILE_NAME_PATTERN.test(fileName)) {
       errors.push(
-        "File name must contain only letters, numbers, hyphens, and underscores"
+        'File name must contain only letters, numbers, hyphens, and underscores',
       );
     }
   }
@@ -66,7 +66,7 @@ export function validateWorkflowFile(
   try {
     JSON.parse(fileContent);
   } catch (_error) {
-    errors.push("Invalid JSON: File must contain valid JSON syntax");
+    errors.push('Invalid JSON: File must contain valid JSON syntax');
   }
 
   return {
@@ -83,27 +83,27 @@ export function validateWorkflowFile(
  */
 export function sanitizeFileName(fileName: string): string {
   // Remove path separators
-  let sanitized = fileName.replace(/[/\\]/g, "");
+  let sanitized = fileName.replace(/[/\\]/g, '');
   // Remove any remaining dangerous characters
-  sanitized = sanitized.replace(/[^a-zA-Z0-9_.-]/g, "");
+  sanitized = sanitized.replace(/[^a-zA-Z0-9_.-]/g, '');
   // Remove leading dots (filename must start with alphanumeric, underscore, or hyphen)
-  sanitized = sanitized.replace(/^\.+/, "");
+  sanitized = sanitized.replace(/^\.+/, '');
   // Collapse multiple consecutive dots in the middle (but preserve .json extension)
   // Split by .json to handle the extension separately
-  if (sanitized.endsWith(".json")) {
+  if (sanitized.endsWith('.json')) {
     const namePart = sanitized.slice(0, -5); // Remove ".json"
-    const sanitizedNamePart = namePart.replace(/\.{2,}/g, ".");
-    sanitized = sanitizedNamePart + ".json";
+    const sanitizedNamePart = namePart.replace(/\.{2,}/g, '.');
+    sanitized = sanitizedNamePart + '.json';
   } else {
-    sanitized = sanitized.replace(/\.{2,}/g, ".");
+    sanitized = sanitized.replace(/\.{2,}/g, '.');
   }
   // Ensure it ends with .json
-  if (!sanitized.endsWith(".json")) {
-    sanitized = sanitized.replace(/\.json$/, "") + ".json";
+  if (!sanitized.endsWith('.json')) {
+    sanitized = sanitized.replace(/\.json$/, '') + '.json';
   }
   // If after all sanitization we have an empty name or just ".json", use a default
-  if (!sanitized || sanitized === ".json") {
-    sanitized = "workflow.json";
+  if (!sanitized || sanitized === '.json') {
+    sanitized = 'workflow.json';
   }
   return sanitized;
 }
@@ -126,8 +126,8 @@ export async function commitFileToRepository(
   repo: string,
   fileName: string,
   fileContent: string,
-  branch: string = "main",
-  message?: string
+  branch: string = 'main',
+  message?: string,
 ): Promise<string> {
   const commitMessage = message || `Add workflow file: ${fileName}`;
 
@@ -141,12 +141,12 @@ export async function commitFileToRepository(
       ref: branch,
     });
 
-    if ("sha" in existingFile.data) {
+    if ('sha' in existingFile.data) {
       fileSha = existingFile.data.sha;
     }
   } catch (error: unknown) {
     // File doesn't exist, that's okay - we'll create it
-    if (error && typeof error === "object" && "status" in error) {
+    if (error && typeof error === 'object' && 'status' in error) {
       const status = error.status as number;
       if (status !== 404) {
         throw error;
@@ -173,7 +173,7 @@ export async function commitFileToRepository(
   const commitSha = response.data.commit.sha;
 
   if (!commitSha) {
-    throw new Error("Failed to get commit SHA from GitHub API response");
+    throw new Error('Failed to get commit SHA from GitHub API response');
   }
 
   return commitSha;
@@ -195,8 +195,8 @@ export async function triggerWorkflowDispatch(
   owner: string,
   repo: string,
   workflowId: string,
-  ref: string = "main",
-  inputs?: Record<string, string>
+  ref: string = 'main',
+  inputs?: Record<string, string>,
 ): Promise<void> {
   await octokit.rest.actions.createWorkflowDispatch({
     owner,
@@ -220,9 +220,9 @@ export async function getWorkflowRunStatus(
   octokit: Octokit,
   owner: string,
   repo: string,
-  workflowRunId: number
+  workflowRunId: number,
 ): Promise<{
-  status: "pending" | "running" | "success" | "failed";
+  status: 'pending' | 'running' | 'success' | 'failed';
   conclusion: string | null;
   htmlUrl: string;
 }> {
@@ -233,12 +233,12 @@ export async function getWorkflowRunStatus(
   });
 
   const run = response.data;
-  let status: "pending" | "running" | "success" | "failed" = "pending";
+  let status: 'pending' | 'running' | 'success' | 'failed' = 'pending';
 
-  if (run.status === "completed") {
-    status = run.conclusion === "success" ? "success" : "failed";
-  } else if (run.status === "in_progress") {
-    status = "running";
+  if (run.status === 'completed') {
+    status = run.conclusion === 'success' ? 'success' : 'failed';
+  } else if (run.status === 'in_progress') {
+    status = 'running';
   }
 
   return {
@@ -264,14 +264,16 @@ export async function getWorkflowRunById(
   octokit: Octokit,
   owner: string,
   repo: string,
-  workflowRunId: number
-): Promise<{
-  id: number;
-  status: "pending" | "running" | "success" | "failed";
-  conclusion: string | null;
-  htmlUrl: string;
-  createdAt: Date;
-} | null> {
+  workflowRunId: number,
+): Promise<
+  {
+    id: number;
+    status: 'pending' | 'running' | 'success' | 'failed';
+    conclusion: string | null;
+    htmlUrl: string;
+    createdAt: Date;
+  } | null
+> {
   try {
     // Get the workflow run directly by ID (recommended pattern)
     const response = await octokit.rest.actions.getWorkflowRun({
@@ -281,12 +283,12 @@ export async function getWorkflowRunById(
     });
 
     const run = response.data;
-    let status: "pending" | "running" | "success" | "failed" = "pending";
+    let status: 'pending' | 'running' | 'success' | 'failed' = 'pending';
 
-    if (run.status === "completed") {
-      status = run.conclusion === "success" ? "success" : "failed";
-    } else if (run.status === "in_progress") {
-      status = "running";
+    if (run.status === 'completed') {
+      status = run.conclusion === 'success' ? 'success' : 'failed';
+    } else if (run.status === 'in_progress') {
+      status = 'running';
     }
 
     return {
@@ -298,7 +300,7 @@ export async function getWorkflowRunById(
     };
   } catch (error: unknown) {
     // If run not found (404), return null
-    if (error && typeof error === "object" && "status" in error) {
+    if (error && typeof error === 'object' && 'status' in error) {
       const status = error.status as number;
       if (status === 404) {
         return null;
