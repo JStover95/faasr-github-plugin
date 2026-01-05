@@ -10,6 +10,14 @@ import { corsHeaders } from './cors.ts';
 /**
  * Format error message to be user-friendly
  *
+ * Handles comprehensive error scenarios including:
+ * - Rate limits (GitHub API rate limiting)
+ * - Permission errors (missing GitHub App permissions)
+ * - Network failures (connection timeouts, DNS errors)
+ * - Validation errors (invalid JSON, file size limits)
+ * - Configuration errors (missing environment variables)
+ * - Not found errors (repository, workflow, file not found)
+ *
  * @param error - Error object or unknown error
  * @param defaultMessage - Default message if error cannot be formatted
  * @returns User-friendly error message
@@ -21,16 +29,108 @@ export function formatErrorMessage(
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
-    if (message.includes('rate limit')) {
-      return 'Too many requests. Please try again in a few minutes.';
+    // Rate limit errors
+    if (
+      message.includes('rate limit') ||
+      message.includes('rate_limit') ||
+      message.includes('too many requests') ||
+      message.includes('429')
+    ) {
+      return 'Too many requests to GitHub. Please wait a few minutes and try again. Rate limits reset every hour.';
     }
 
-    if (message.includes('permission')) {
-      return 'Permission denied. Please check your GitHub App permissions.';
+    // Permission errors
+    if (
+      message.includes('permission') ||
+      message.includes('forbidden') ||
+      message.includes('403') ||
+      message.includes('access denied')
+    ) {
+      return 'Permission denied. Please ensure the GitHub App has the required permissions: Contents (read & write), Actions (read & write), and Metadata (read). You may need to reinstall the app.';
     }
 
-    if (message.includes('not found')) {
-      return 'Resource not found. Please check your repository and workflow configuration.';
+    // Network failures
+    if (
+      message.includes('network') ||
+      message.includes('timeout') ||
+      message.includes('connection') ||
+      message.includes('dns') ||
+      message.includes('econnrefused') ||
+      message.includes('enotfound') ||
+      message.includes('fetch failed')
+    ) {
+      return 'Network error: Unable to connect to GitHub. Please check your internet connection and try again. If the problem persists, GitHub may be experiencing issues.';
+    }
+
+    // Not found errors
+    if (
+      message.includes('not found') ||
+      message.includes('404') ||
+      message.includes('does not exist')
+    ) {
+      return 'Resource not found. Please check that the repository exists and you have access to it. If you just created a fork, wait a moment and try again.';
+    }
+
+    // Validation errors
+    if (
+      message.includes('invalid') ||
+      message.includes('validation') ||
+      message.includes('malformed') ||
+      message.includes('parse error')
+    ) {
+      // Return the original message for validation errors as they're usually specific
+      return error.message;
+    }
+
+    // Configuration errors
+    if (
+      message.includes('configuration') ||
+      message.includes('config') ||
+      message.includes('environment') ||
+      message.includes('missing') ||
+      message.includes('not configured')
+    ) {
+      return 'Configuration error: Required settings are missing. Please contact support if this error persists.';
+    }
+
+    // Authentication errors
+    if (
+      message.includes('authentication') ||
+      message.includes('unauthorized') ||
+      message.includes('401') ||
+      message.includes('token') ||
+      message.includes('credentials')
+    ) {
+      return 'Authentication failed. Please try logging in again. If the problem persists, you may need to reinstall the GitHub App.';
+    }
+
+    // Server errors
+    if (
+      message.includes('500') ||
+      message.includes('502') ||
+      message.includes('503') ||
+      message.includes('504') ||
+      message.includes('internal server error')
+    ) {
+      return 'Server error: GitHub is experiencing issues. Please try again in a few minutes.';
+    }
+
+    // File size errors
+    if (
+      message.includes('file size') ||
+      message.includes('too large') ||
+      message.includes('size limit')
+    ) {
+      return 'File is too large. Maximum file size is 1MB. Please reduce the file size and try again.';
+    }
+
+    // JSON parsing errors
+    if (
+      message.includes('json') ||
+      message.includes('parse') ||
+      message.includes('syntax error')
+    ) {
+      return 'Invalid JSON: The file contains invalid JSON syntax. Please check the file format and try again.';
     }
 
     // Return the original error message if it's already user-friendly
@@ -43,15 +143,45 @@ export function formatErrorMessage(
 /**
  * Handle GitHub API-specific errors
  *
+ * Provides detailed error messages for common GitHub API error scenarios:
+ * - Rate limiting (429 errors)
+ * - Permission issues (403 errors)
+ * - Not found (404 errors)
+ * - Server errors (5xx errors)
+ * - Network issues
+ *
  * @param error - Unknown error that might be from GitHub API
  * @returns Formatted error message
  */
 export function handleGitHubError(error: unknown): string {
   if (error instanceof Error) {
+    // Check for GitHub API error structure (from @octokit)
+    const errorObj = error as Error & { status?: number; response?: unknown };
+    if (errorObj.status) {
+      switch (errorObj.status) {
+        case 401:
+          return 'GitHub authentication failed. Please reinstall the GitHub App.';
+        case 403:
+          return 'Permission denied by GitHub. Please check that the GitHub App has the required permissions and try again.';
+        case 404:
+          return 'Resource not found on GitHub. Please verify the repository exists and is accessible.';
+        case 422:
+          return 'GitHub validation error. Please check your request and try again.';
+        case 429:
+          return 'GitHub API rate limit exceeded. Please wait a few minutes before trying again. Rate limits reset every hour.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'GitHub is experiencing server issues. Please try again in a few minutes.';
+        default:
+          return formatErrorMessage(error, 'GitHub API error occurred');
+      }
+    }
     return formatErrorMessage(error, 'GitHub API error occurred');
   }
 
-  return 'An unexpected error occurred while communicating with GitHub.';
+  return 'An unexpected error occurred while communicating with GitHub. Please try again later.';
 }
 
 /**
