@@ -360,6 +360,63 @@ describe("workflowsApi", () => {
 
       await expect(workflowsApi.getStatus("test.json")).rejects.toThrow();
     });
+
+    it("supports polling workflow status", async () => {
+      // Simulate polling pattern: check status multiple times until complete
+      const pendingResponse = {
+        fileName: "test.json",
+        status: "pending" as const,
+        triggeredAt: "2025-01-01T00:00:00Z",
+      };
+
+      const runningResponse = {
+        fileName: "test.json",
+        status: "running" as const,
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/workflow/123",
+        triggeredAt: "2025-01-01T00:00:00Z",
+      };
+
+      const successResponse = {
+        fileName: "test.json",
+        status: "success" as const,
+        workflowRunId: 123,
+        workflowRunUrl: "https://github.com/test/workflow/123",
+        triggeredAt: "2025-01-01T00:00:00Z",
+        completedAt: "2025-01-01T00:05:00Z",
+      };
+
+      // First call returns pending
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => pendingResponse,
+      } as Response);
+
+      // Second call returns running
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => runningResponse,
+      } as Response);
+
+      // Third call returns success
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => successResponse,
+      } as Response);
+
+      // Poll until status is complete
+      let status = await workflowsApi.getStatus("test.json");
+      expect(status.status).toBe("pending");
+
+      status = await workflowsApi.getStatus("test.json");
+      expect(status.status).toBe("running");
+
+      status = await workflowsApi.getStatus("test.json");
+      expect(status.status).toBe("success");
+      expect(status.completedAt).toBeDefined();
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
   });
 });
 
