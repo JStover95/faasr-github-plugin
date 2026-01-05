@@ -199,21 +199,21 @@ Deno.test("validateWorkflowFile - multiple validation errors", () => {
 // ============================================================================
 
 Deno.test("sanitizeFileName - removes path traversal", () => {
-  // The function removes / and \ but keeps dots, so ../ becomes ..
+  // The function removes / and \ and leading dots, so ../ becomes file.json
   const result = sanitizeFileName("../file.json");
-  assertEquals(result, "..file.json");
+  assertEquals(result, "file.json");
 });
 
 Deno.test("sanitizeFileName - removes multiple path separators", () => {
-  // The function removes / and \ but keeps dots
+  // The function removes / and \ and leading dots
   const result = sanitizeFileName("../../file.json");
-  assertEquals(result, "....file.json");
+  assertEquals(result, "file.json");
 });
 
 Deno.test("sanitizeFileName - removes backslash separators", () => {
-  // The function removes / and \ but keeps dots
+  // The function removes / and \ and leading dots
   const result = sanitizeFileName("..\\file.json");
-  assertEquals(result, "..file.json");
+  assertEquals(result, "file.json");
 });
 
 Deno.test("sanitizeFileName - removes invalid characters", () => {
