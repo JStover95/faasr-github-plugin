@@ -11,6 +11,7 @@ import { getSessionFromRequest } from '../_shared/auth.ts';
 import { GitHubClientService } from '../_shared/github-client.ts';
 import { WorkflowUploadService } from '../_shared/workflow-upload-service.ts';
 import { WorkflowStatusService } from '../_shared/workflow-status-service.ts';
+import { validateEnvironmentOnStartup } from '../_shared/env-validation.ts';
 import {
   createAuthErrorResponse,
   createConfigurationErrorResponse,
@@ -180,6 +181,14 @@ export async function handleStatus(
  * Main Edge Function handler
  */
 if (import.meta.main) {
+  // Validate environment variables on module load (once per Edge Function instance)
+  try {
+    validateEnvironmentOnStartup();
+  } catch (error) {
+    console.error('Environment validation failed:', error);
+    // Don't throw here - let individual handlers handle missing env vars gracefully
+  }
+
   Deno.serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {

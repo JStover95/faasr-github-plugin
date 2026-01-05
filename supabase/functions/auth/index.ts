@@ -21,6 +21,7 @@ import {
   getSessionFromRequest,
 } from '../_shared/auth.ts';
 import { ensureForkExists } from '../_shared/repository.ts';
+import { validateEnvironmentOnStartup } from '../_shared/env-validation.ts';
 import { Octokit } from '../_shared/deps.ts';
 import type { UserSession } from '../_shared/types.ts';
 
@@ -281,6 +282,14 @@ export function handleLogout(_req: Request): Response {
  * Main Edge Function handler
  */
 if (import.meta.main) {
+  // Validate environment variables on module load (once per Edge Function instance)
+  try {
+    validateEnvironmentOnStartup();
+  } catch (error) {
+    console.error('Environment validation failed:', error);
+    // Don't throw here - let individual handlers handle missing env vars gracefully
+  }
+
   Deno.serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
