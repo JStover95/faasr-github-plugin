@@ -212,3 +212,4 @@ Deno.test("checkInstallationPermissions - error when installation fetch fails", 
   assertEquals(result.valid, false);
   assert(result.missingPermissions.length > 0);
 });
+
