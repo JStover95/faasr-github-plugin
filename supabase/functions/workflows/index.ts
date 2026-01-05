@@ -22,7 +22,7 @@ import {
 /**
  * Parse FormData from request
  */
-async function parseFormData(req: Request): Promise<{
+export async function parseFormData(req: Request): Promise<{
   file: File | null;
   fileName: string | null;
 }> {
@@ -36,7 +36,7 @@ async function parseFormData(req: Request): Promise<{
 /**
  * Handle POST /workflows/upload - Upload and register workflow JSON file
  */
-async function handleUpload(req: Request): Promise<Response> {
+export async function handleUpload(req: Request): Promise<Response> {
   try {
     // Validate session
     const session = getSessionFromRequest(req);
@@ -108,7 +108,7 @@ async function handleUpload(req: Request): Promise<Response> {
 /**
  * Handle GET /workflows/status/{fileName} - Get workflow registration status
  */
-async function handleStatus(req: Request, fileName: string): Promise<Response> {
+export async function handleStatus(req: Request, fileName: string): Promise<Response> {
   try {
     // Validate session
     const session = getSessionFromRequest(req);

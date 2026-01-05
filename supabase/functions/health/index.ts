@@ -12,7 +12,10 @@ interface HealthResponse {
   version: string;
 }
 
-serve((req) => {
+/**
+ * Handle health check request
+ */
+export function handleHealthCheck(req: Request): Response {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -52,4 +55,6 @@ serve((req) => {
       },
     });
   }
-});
+}
+
+serve(handleHealthCheck);

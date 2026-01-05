@@ -27,7 +27,7 @@ import type { UserSession } from '../_shared/types.ts';
 /**
  * Handle GET /auth/install - Initiate GitHub App installation
  */
-function handleInstall(_req: Request): Response {
+export function handleInstall(_req: Request): Response {
   const clientId = Deno.env.get('GITHUB_CLIENT_ID');
   if (!clientId) {
     return new Response(
@@ -61,7 +61,7 @@ function handleInstall(_req: Request): Response {
 /**
  * Handle GET /auth/callback - Handle GitHub App installation callback
  */
-async function handleCallback(req: Request): Promise<Response> {
+export async function handleCallback(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
     const installationId = url.searchParams.get('installation_id');
@@ -208,7 +208,7 @@ async function handleCallback(req: Request): Promise<Response> {
 /**
  * Handle GET /auth/session - Get current session status
  */
-function handleGetSession(req: Request): Response {
+export function handleGetSession(req: Request): Response {
   const session = getSessionFromRequest(req);
 
   if (!session) {
@@ -242,7 +242,7 @@ function handleGetSession(req: Request): Response {
 /**
  * Handle POST /auth/logout - Log out current session
  */
-function handleLogout(_req: Request): Response {
+export function handleLogout(_req: Request): Response {
   const logoutCookie = createLogoutCookie();
 
   return new Response(
