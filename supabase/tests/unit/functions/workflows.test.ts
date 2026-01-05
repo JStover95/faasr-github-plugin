@@ -87,7 +87,7 @@ Deno.test('handleUpload - returns auth error when no session', async () => {
   assertEquals(response.status, 401);
   const body = await response.json();
   assertEquals(body.success, false);
-  assertEquals(body.error, 'Unauthorized');
+  assertEquals(body.error, 'Authentication required');
 });
 
 Deno.test('handleUpload - returns validation error when file is missing', async () => {
@@ -167,7 +167,7 @@ Deno.test('handleUpload - returns error when GitHub App config is missing', asyn
 
     // Should return configuration error
     assertEquals(response.status, 500);
-    const body = JSON.parse(response.body as unknown as string);
+    const body = await response.json();
     assertEquals(body.success, false);
     assert(
       body.error.includes('GitHub App configuration missing') ||
@@ -236,7 +236,7 @@ Deno.test('handleStatus - returns auth error when no session', async () => {
   assertEquals(response.status, 401);
   const body = await response.json();
   assertEquals(body.success, false);
-  assertEquals(body.error, 'Unauthorized');
+  assertEquals(body.error, 'Authentication required');
 });
 
 Deno.test('handleStatus - returns error when GitHub App config is missing', async () => {
