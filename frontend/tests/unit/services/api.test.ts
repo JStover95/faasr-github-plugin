@@ -477,6 +477,9 @@ describe("handleResponse error handling", () => {
       },
     } as unknown as Response);
 
-    await expect(authApi.getSession()).rejects.toThrow("HTTP 500");
+    // When JSON parsing fails, should return user-friendly error message based on status code
+    await expect(authApi.getSession()).rejects.toThrow(
+      "Server error. Please try again in a few minutes."
+    );
   });
 });
