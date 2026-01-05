@@ -118,7 +118,10 @@ export async function handleUpload(req: Request): Promise<Response> {
 /**
  * Handle GET /workflows/status/{fileName} - Get workflow registration status
  */
-export async function handleStatus(req: Request, fileName: string): Promise<Response> {
+export async function handleStatus(
+  req: Request,
+  fileName: string,
+): Promise<Response> {
   try {
     // Validate session
     const session = getSessionFromRequest(req);
@@ -178,61 +181,63 @@ export async function handleStatus(req: Request, fileName: string): Promise<Resp
  */
 if (import.meta.main) {
   Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
 
-  const url = new URL(req.url);
-  // Extract path after /functions/v1
-  const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
-  const path = pathMatch ? pathMatch[1] : url.pathname;
+    const url = new URL(req.url);
+    // Extract path after /functions/v1
+    const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
+    const path = pathMatch ? pathMatch[1] : url.pathname;
 
-  try {
-    // Route to appropriate handler
-    if (path === '/workflows/upload' && req.method === 'POST') {
-      return await handleUpload(req);
-    } else if (path.startsWith('/workflows/status/') && req.method === 'GET') {
-      // Extract fileName from path
-      const fileNameMatch = path.match(/\/workflows\/status\/(.+)$/);
-      if (!fileNameMatch) {
+    try {
+      // Route to appropriate handler
+      if (path === '/workflows/upload' && req.method === 'POST') {
+        return await handleUpload(req);
+      } else if (
+        path.startsWith('/workflows/status/') && req.method === 'GET'
+      ) {
+        // Extract fileName from path
+        const fileNameMatch = path.match(/\/workflows\/status\/(.+)$/);
+        if (!fileNameMatch) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'File name is required',
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            },
+          );
+        }
+        const fileName = decodeURIComponent(fileNameMatch[1]);
+        return await handleStatus(req, fileName);
+      } else {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'File name is required',
+            error: 'Not found',
           }),
           {
-            status: 400,
+            status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           },
         );
       }
-      const fileName = decodeURIComponent(fileNameMatch[1]);
-      return await handleStatus(req, fileName);
-    } else {
+    } catch (error) {
+      console.error('Edge Function error:', error);
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Not found',
+          error: 'Internal server error',
         }),
         {
-          status: 404,
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
       );
     }
-  } catch (error) {
-    console.error('Edge Function error:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Internal server error',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
-  }
   });
 }

@@ -282,50 +282,50 @@ export function handleLogout(_req: Request): Response {
  */
 if (import.meta.main) {
   Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
 
-  const url = new URL(req.url);
-  // Extract path after /functions/v1
-  const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
-  const path = pathMatch ? pathMatch[1] : url.pathname;
+    const url = new URL(req.url);
+    // Extract path after /functions/v1
+    const pathMatch = url.pathname.match(/\/functions\/v1(\/.*)$/);
+    const path = pathMatch ? pathMatch[1] : url.pathname;
 
-  try {
-    // Route to appropriate handler
-    if (path === '/auth/install' && req.method === 'GET') {
-      return handleInstall(req);
-    } else if (path === '/auth/callback' && req.method === 'GET') {
-      return await handleCallback(req);
-    } else if (path === '/auth/session' && req.method === 'GET') {
-      return handleGetSession(req);
-    } else if (path === '/auth/logout' && req.method === 'POST') {
-      return handleLogout(req);
-    } else {
+    try {
+      // Route to appropriate handler
+      if (path === '/auth/install' && req.method === 'GET') {
+        return handleInstall(req);
+      } else if (path === '/auth/callback' && req.method === 'GET') {
+        return await handleCallback(req);
+      } else if (path === '/auth/session' && req.method === 'GET') {
+        return handleGetSession(req);
+      } else if (path === '/auth/logout' && req.method === 'POST') {
+        return handleLogout(req);
+      } else {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Not found',
+          }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
+    } catch (error) {
+      console.error('Edge Function error:', error);
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Not found',
+          error: 'Internal server error',
         }),
         {
-          status: 404,
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
       );
     }
-  } catch (error) {
-    console.error('Edge Function error:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'Internal server error',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
-  }
   });
 }

@@ -4,20 +4,20 @@
  * Tests GitHub App installation, callback handling, session management, and logout
  */
 
-import { assertEquals, assert } from 'jsr:@std/assert@1.0.16';
+import { assert, assertEquals } from 'jsr:@std/assert@1.0.16';
 import { stub } from 'jsr:@std/testing@1.0.16/mock';
 import {
-  handleInstall,
+  deps,
   handleCallback,
   handleGetSession,
+  handleInstall,
   handleLogout,
-  deps,
 } from '../../../functions/auth/index.ts';
 import {
+  createMockRequest,
   createTestGitHubInstallation,
   createTestRepositoryFork,
   createTestUserSession,
-  createMockRequest,
   restoreEnvState,
   saveEnvState,
 } from './_shared/test-utils.ts';
@@ -31,7 +31,10 @@ Deno.test('handleInstall - redirects to GitHub App installation URL', () => {
   const saved = saveEnvState(['GITHUB_CLIENT_ID']);
   try {
     Deno.env.set('GITHUB_CLIENT_ID', 'test-client-id');
-    const req = createMockRequest({ method: 'GET', url: 'https://example.com' });
+    const req = createMockRequest({
+      method: 'GET',
+      url: 'https://example.com',
+    });
 
     const response = handleInstall(req);
 
@@ -49,7 +52,10 @@ Deno.test('handleInstall - returns error when client ID is missing', async () =>
   const saved = saveEnvState(['GITHUB_CLIENT_ID']);
   try {
     Deno.env.delete('GITHUB_CLIENT_ID');
-    const req = createMockRequest({ method: 'GET', url: 'https://example.com' });
+    const req = createMockRequest({
+      method: 'GET',
+      url: 'https://example.com',
+    });
 
     const response = handleInstall(req);
 
@@ -130,7 +136,11 @@ Deno.test('handleCallback - successful installation flow', async () => {
   const getTokenStub = stub(
     deps,
     'getInstallationToken',
-    () => Promise.resolve({ token: mockToken, expiresAt: new Date().toISOString() }),
+    () =>
+      Promise.resolve({
+        token: mockToken,
+        expiresAt: new Date().toISOString(),
+      }),
   );
 
   const ensureForkStub = stub(
@@ -252,10 +262,11 @@ Deno.test('handleCallback - handles permission errors', async () => {
   const checkPermissionsStub = stub(
     deps,
     'checkInstallationPermissions',
-    () => Promise.resolve({
-      valid: false,
-      missingPermissions: ['contents:write', 'actions:write'],
-    }),
+    () =>
+      Promise.resolve({
+        valid: false,
+        missingPermissions: ['contents:write', 'actions:write'],
+      }),
   );
 
   try {
@@ -381,4 +392,3 @@ Deno.test('handleLogout - works with any request', async () => {
   const body = await response.json();
   assertEquals(body.success, true);
 });
-

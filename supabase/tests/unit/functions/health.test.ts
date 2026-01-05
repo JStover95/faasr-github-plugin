@@ -4,7 +4,7 @@
  * Tests health check endpoint response and error handling
  */
 
-import { assertEquals, assert } from 'jsr:@std/assert@1.0.16';
+import { assert, assertEquals } from 'jsr:@std/assert@1.0.16';
 import { handleHealthCheck } from '../../../functions/health/index.ts';
 import { createMockRequest } from './_shared/test-utils.ts';
 
@@ -99,7 +99,10 @@ Deno.test('handleHealthCheck - timestamp is valid ISO string', async () => {
   const date = new Date(timestamp);
   assert(!isNaN(date.getTime()));
   assert(timestamp.includes('T'));
-  assert(timestamp.includes('Z') || timestamp.includes('+') || timestamp.includes('-'));
+  assert(
+    timestamp.includes('Z') || timestamp.includes('+') ||
+      timestamp.includes('-'),
+  );
 });
 
 Deno.test('handleHealthCheck - response has correct content type', () => {
@@ -114,4 +117,3 @@ Deno.test('handleHealthCheck - response has correct content type', () => {
   const contentType = response.headers.get('Content-Type');
   assertEquals(contentType, 'application/json');
 });
-
