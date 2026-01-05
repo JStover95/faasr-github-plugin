@@ -122,11 +122,128 @@ cd frontend
 npm run dev
 ```
 
+The frontend will start on `http://localhost:5173` (or the port shown in the terminal).
+
 **Local Supabase (optional):**
+
+For local development with Supabase:
 
 ```bash
 supabase start
 ```
+
+This will start local Supabase services. Note that Edge Functions will need to be deployed separately even in local development.
+
+## Deployment
+
+### Deploying to Production
+
+#### 1. Deploy Supabase Edge Functions
+
+Deploy all Edge Functions to your Supabase project:
+
+```bash
+supabase functions deploy auth
+supabase functions deploy workflows
+supabase functions deploy health
+```
+
+Verify deployment:
+
+```bash
+supabase functions list
+```
+
+#### 2. Configure Production Environment Variables
+
+Ensure all required environment variables are set in Supabase:
+
+**Required Edge Function Secrets:**
+
+- `GITHUB_APP_ID` - Your GitHub App ID
+- `GITHUB_CLIENT_ID` - Your GitHub App Client ID
+- `GITHUB_CLIENT_SECRET` - Your GitHub App Client Secret
+- `GITHUB_PRIVATE_KEY` - Your GitHub App Private Key (PEM format)
+- `JWT_SECRET` - Strong random secret for JWT signing (minimum 32 characters)
+
+**Set secrets via CLI:**
+
+```bash
+supabase secrets set GITHUB_APP_ID=your_app_id
+supabase secrets set GITHUB_CLIENT_ID=your_client_id
+supabase secrets set GITHUB_CLIENT_SECRET=your_client_secret
+supabase secrets set GITHUB_PRIVATE_KEY="$(cat path/to/private-key.pem)"
+supabase secrets set JWT_SECRET=your_jwt_secret
+```
+
+**Or via Supabase Dashboard:**
+
+1. Go to Project Settings → Edge Functions → Secrets
+2. Add each secret variable
+
+#### 3. Build and Deploy Frontend
+
+**Option A: Deploy to Vercel/Netlify:**
+
+1. Build the frontend:
+
+   ```bash
+   cd frontend
+   npm run build
+   ```
+
+2. Deploy the `dist` folder to your hosting provider
+
+3. Set environment variables in your hosting provider:
+   - `VITE_SUPABASE_URL` - Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` - Your Supabase anon/public key
+
+**Option B: Deploy to Static Hosting:**
+
+1. Build the frontend:
+
+   ```bash
+   cd frontend
+   npm run build
+   ```
+
+2. Upload the `dist` folder contents to your static hosting provider
+
+3. Configure environment variables as build-time variables (check your hosting provider's documentation)
+
+#### 4. Update GitHub App Settings
+
+In your GitHub App settings, update the callback URL to point to your deployed frontend:
+
+- **Homepage URL**: `https://your-frontend-domain.com`
+- **Callback URL**: `https://your-frontend-domain.com/install`
+- **Setup URL**: `https://your-frontend-domain.com/install`
+
+### Environment Variables Reference
+
+#### Frontend Environment Variables
+
+Create a `.env` file in the `frontend/` directory:
+
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+**Note**: Variables must be prefixed with `VITE_` to be accessible in the frontend code.
+
+#### Backend Environment Variables (Supabase Edge Functions)
+
+Set these as secrets in Supabase (not in `.env` files):
+
+| Variable | Description | Required |
+| ---------- | ------------- | ---------- |
+| `GITHUB_APP_ID` | GitHub App ID from app settings | Yes |
+| `GITHUB_CLIENT_ID` | GitHub App Client ID | Yes |
+| `GITHUB_CLIENT_SECRET` | GitHub App Client Secret | Yes |
+| `GITHUB_PRIVATE_KEY` | GitHub App Private Key (PEM format) | Yes |
+| `JWT_SECRET` | Secret for JWT token signing (min 32 chars) | Yes |
 
 ## Development
 
@@ -139,11 +256,85 @@ cd frontend
 npm test
 ```
 
+Run tests with coverage:
+
+```bash
+cd frontend
+npm test -- --coverage
+```
+
 **Backend (Edge Functions):**
 
 ```bash
 deno test supabase/tests/functions/
 ```
+
+Run with coverage:
+
+```bash
+deno test --coverage=coverage supabase/tests/functions/
+deno coverage coverage
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+**1. "GitHub App configuration missing" error:**
+
+- Verify all GitHub App secrets are set in Supabase
+- Check that `GITHUB_PRIVATE_KEY` includes the full PEM format with headers
+- Ensure secrets are set for the correct project
+
+**2. "Authentication required" error:**
+
+- Verify the user has completed the GitHub App installation flow
+- Check that the session cookie is being sent with requests
+- Verify `JWT_SECRET` is set and matches between deployments
+
+**3. "Permission denied" error:**
+
+- Ensure the GitHub App has the required permissions:
+  - Contents: Read & write
+  - Actions: Read & write
+  - Metadata: Read
+- User may need to reinstall the GitHub App
+
+**4. Frontend can't connect to backend:**
+
+- Verify `VITE_SUPABASE_URL` is correct in `.env`
+- Check that Edge Functions are deployed
+- Verify CORS is configured correctly (should be handled automatically)
+
+**5. Rate limit errors:**
+
+- GitHub API has rate limits (5000 requests/hour for authenticated requests)
+- Wait a few minutes and try again
+- Consider implementing request caching for production
+
+### Local Development Tips
+
+1. **Use Supabase CLI for local testing:**
+
+   ```bash
+   supabase functions serve auth --no-verify-jwt
+   ```
+
+2. **Test Edge Functions locally:**
+
+   ```bash
+   supabase functions serve
+   ```
+
+3. **View Edge Function logs:**
+
+   ```bash
+   supabase functions logs auth
+   ```
+
+4. **Debug Edge Functions:**
+   - Use `console.log()` for debugging (visible in Supabase Dashboard → Edge Functions → Logs)
+   - Check function logs in real-time: `supabase functions logs auth --follow`
 
 ### Project Documentation
 
