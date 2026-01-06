@@ -32,6 +32,9 @@ coverage/
 
 # Supabase
 .supabase/
+supabase/.branches
+supabase/.temp
+functions/service-account.json
 
 # Python (if any)
 __pycache__/
@@ -51,3 +54,6 @@ target/
 *.log
 
 .notes.md
+
+.temp/
+*.pem
