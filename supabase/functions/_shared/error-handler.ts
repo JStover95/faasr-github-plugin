@@ -5,7 +5,7 @@
  * Converts technical errors into user-friendly messages for API responses.
  */
 
-import { corsHeaders } from './cors.ts';
+import { getCorsHeaders } from "./cors.ts";
 
 /**
  * Format error message to be user-friendly
@@ -24,59 +24,59 @@ import { corsHeaders } from './cors.ts';
  */
 export function formatErrorMessage(
   error: unknown,
-  defaultMessage: string = 'An error occurred',
+  defaultMessage: string = "An error occurred"
 ): string {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
     // Rate limit errors
     if (
-      message.includes('rate limit') ||
-      message.includes('rate_limit') ||
-      message.includes('too many requests') ||
-      message.includes('429')
+      message.includes("rate limit") ||
+      message.includes("rate_limit") ||
+      message.includes("too many requests") ||
+      message.includes("429")
     ) {
-      return 'Too many requests. Please try again in a few minutes.';
+      return "Too many requests. Please try again in a few minutes.";
     }
 
     // Permission errors
     if (
-      message.includes('permission') ||
-      message.includes('forbidden') ||
-      message.includes('403') ||
-      message.includes('access denied')
+      message.includes("permission") ||
+      message.includes("forbidden") ||
+      message.includes("403") ||
+      message.includes("access denied")
     ) {
-      return 'Permission denied. Please check your GitHub App permissions.';
+      return "Permission denied. Please check your GitHub App permissions.";
     }
 
     // Network failures
     if (
-      message.includes('network') ||
-      message.includes('timeout') ||
-      message.includes('connection') ||
-      message.includes('dns') ||
-      message.includes('econnrefused') ||
-      message.includes('enotfound') ||
-      message.includes('fetch failed')
+      message.includes("network") ||
+      message.includes("timeout") ||
+      message.includes("connection") ||
+      message.includes("dns") ||
+      message.includes("econnrefused") ||
+      message.includes("enotfound") ||
+      message.includes("fetch failed")
     ) {
-      return 'Network error: Unable to connect to GitHub. Please check your internet connection and try again. If the problem persists, GitHub may be experiencing issues.';
+      return "Network error: Unable to connect to GitHub. Please check your internet connection and try again. If the problem persists, GitHub may be experiencing issues.";
     }
 
     // Not found errors
     if (
-      message.includes('not found') ||
-      message.includes('404') ||
-      message.includes('does not exist')
+      message.includes("not found") ||
+      message.includes("404") ||
+      message.includes("does not exist")
     ) {
-      return 'Resource not found. Please check your repository and workflow configuration.';
+      return "Resource not found. Please check your repository and workflow configuration.";
     }
 
     // Validation errors
     if (
-      message.includes('invalid') ||
-      message.includes('validation') ||
-      message.includes('malformed') ||
-      message.includes('parse error')
+      message.includes("invalid") ||
+      message.includes("validation") ||
+      message.includes("malformed") ||
+      message.includes("parse error")
     ) {
       // Return the original message for validation errors as they're usually specific
       return error.message;
@@ -84,53 +84,53 @@ export function formatErrorMessage(
 
     // Configuration errors
     if (
-      message.includes('configuration') ||
-      message.includes('config') ||
-      message.includes('environment') ||
-      message.includes('missing') ||
-      message.includes('not configured')
+      message.includes("configuration") ||
+      message.includes("config") ||
+      message.includes("environment") ||
+      message.includes("missing") ||
+      message.includes("not configured")
     ) {
-      return 'Configuration error: Required settings are missing. Please contact support if this error persists.';
+      return "Configuration error: Required settings are missing. Please contact support if this error persists.";
     }
 
     // Authentication errors
     if (
-      message.includes('authentication') ||
-      message.includes('unauthorized') ||
-      message.includes('401') ||
-      message.includes('token') ||
-      message.includes('credentials')
+      message.includes("authentication") ||
+      message.includes("unauthorized") ||
+      message.includes("401") ||
+      message.includes("token") ||
+      message.includes("credentials")
     ) {
-      return 'Authentication required';
+      return "Authentication required";
     }
 
     // Server errors
     if (
-      message.includes('500') ||
-      message.includes('502') ||
-      message.includes('503') ||
-      message.includes('504') ||
-      message.includes('internal server error')
+      message.includes("500") ||
+      message.includes("502") ||
+      message.includes("503") ||
+      message.includes("504") ||
+      message.includes("internal server error")
     ) {
-      return 'Server error: GitHub is experiencing issues. Please try again in a few minutes.';
+      return "Server error: GitHub is experiencing issues. Please try again in a few minutes.";
     }
 
     // File size errors
     if (
-      message.includes('file size') ||
-      message.includes('too large') ||
-      message.includes('size limit')
+      message.includes("file size") ||
+      message.includes("too large") ||
+      message.includes("size limit")
     ) {
-      return 'File is too large. Maximum file size is 1MB. Please reduce the file size and try again.';
+      return "File is too large. Maximum file size is 1MB. Please reduce the file size and try again.";
     }
 
     // JSON parsing errors
     if (
-      message.includes('json') ||
-      message.includes('parse') ||
-      message.includes('syntax error')
+      message.includes("json") ||
+      message.includes("parse") ||
+      message.includes("syntax error")
     ) {
-      return 'Invalid JSON: The file contains invalid JSON syntax. Please check the file format and try again.';
+      return "Invalid JSON: The file contains invalid JSON syntax. Please check the file format and try again.";
     }
 
     // Return the original error message if it's already user-friendly
@@ -160,28 +160,28 @@ export function handleGitHubError(error: unknown): string {
     if (errorObj.status) {
       switch (errorObj.status) {
         case 401:
-          return 'GitHub authentication failed. Please reinstall the GitHub App.';
+          return "GitHub authentication failed. Please reinstall the GitHub App.";
         case 403:
-          return 'Permission denied by GitHub. Please check that the GitHub App has the required permissions and try again.';
+          return "Permission denied by GitHub. Please check that the GitHub App has the required permissions and try again.";
         case 404:
-          return 'Resource not found on GitHub. Please verify the repository exists and is accessible.';
+          return "Resource not found on GitHub. Please verify the repository exists and is accessible.";
         case 422:
-          return 'GitHub validation error. Please check your request and try again.';
+          return "GitHub validation error. Please check your request and try again.";
         case 429:
-          return 'GitHub API rate limit exceeded. Please wait a few minutes before trying again. Rate limits reset every hour.';
+          return "GitHub API rate limit exceeded. Please wait a few minutes before trying again. Rate limits reset every hour.";
         case 500:
         case 502:
         case 503:
         case 504:
-          return 'GitHub is experiencing server issues. Please try again in a few minutes.';
+          return "GitHub is experiencing server issues. Please try again in a few minutes.";
         default:
-          return formatErrorMessage(error, 'GitHub API error occurred');
+          return formatErrorMessage(error, "GitHub API error occurred");
       }
     }
-    return formatErrorMessage(error, 'GitHub API error occurred');
+    return formatErrorMessage(error, "GitHub API error occurred");
   }
 
-  return 'An unexpected error occurred while communicating with GitHub.';
+  return "An unexpected error occurred while communicating with GitHub.";
 }
 
 /**
@@ -190,14 +190,19 @@ export function handleGitHubError(error: unknown): string {
  * @param error - Error object or unknown error
  * @param status - HTTP status code
  * @param defaultMessage - Default error message
+ * @param request - Request object for CORS headers (optional, for backwards compatibility)
  * @returns HTTP Response with error details
  */
 export function createErrorResponse(
   error: unknown,
   status: number,
-  defaultMessage: string = 'An error occurred',
+  defaultMessage: string = "An error occurred",
+  request?: Request
 ): Response {
   const errorMessage = formatErrorMessage(error, defaultMessage);
+  const corsHeaders = request
+    ? getCorsHeaders(request)
+    : getCorsHeaders(new Request("http://localhost"));
 
   return new Response(
     JSON.stringify({
@@ -206,21 +211,23 @@ export function createErrorResponse(
     }),
     {
       status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
   );
 }
 
 /**
  * Create authentication error response
  *
+ * @param request - Request object for CORS headers (optional)
  * @returns HTTP Response for authentication errors
  */
-export function createAuthErrorResponse(): Response {
+export function createAuthErrorResponse(request?: Request): Response {
   return createErrorResponse(
-    new Error('Authentication required'),
+    new Error("Authentication required"),
     401,
-    'Authentication required',
+    "Authentication required",
+    request
   );
 }
 
@@ -229,11 +236,13 @@ export function createAuthErrorResponse(): Response {
  *
  * @param error - Error message or validation errors
  * @param details - Optional additional error details
+ * @param request - Request object for CORS headers (optional)
  * @returns HTTP Response for validation errors
  */
 export function createValidationErrorResponse(
   error: string,
   details?: unknown,
+  request?: Request
 ): Response {
   const responseBody: Record<string, unknown> = {
     success: false,
@@ -244,23 +253,32 @@ export function createValidationErrorResponse(
     responseBody.details = details;
   }
 
-  return new Response(
-    JSON.stringify(responseBody),
-    {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    },
-  );
+  const corsHeaders = request
+    ? getCorsHeaders(request)
+    : getCorsHeaders(new Request("http://localhost"));
+
+  return new Response(JSON.stringify(responseBody), {
+    status: 400,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 /**
  * Create not found error response
  *
  * @param error - Error message
+ * @param request - Request object for CORS headers (optional)
  * @returns HTTP Response for not found errors
  */
-export function createNotFoundErrorResponse(error: string): Response {
+export function createNotFoundErrorResponse(
+  error: string,
+  request?: Request
+): Response {
   // Use the error message directly without formatting
+  const corsHeaders = request
+    ? getCorsHeaders(request)
+    : getCorsHeaders(new Request("http://localhost"));
+
   return new Response(
     JSON.stringify({
       success: false,
@@ -268,8 +286,8 @@ export function createNotFoundErrorResponse(error: string): Response {
     }),
     {
       status: 404,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
   );
 }
 
@@ -277,10 +295,18 @@ export function createNotFoundErrorResponse(error: string): Response {
  * Create configuration error response
  *
  * @param error - Error message
+ * @param request - Request object for CORS headers (optional)
  * @returns HTTP Response for configuration errors
  */
-export function createConfigurationErrorResponse(error: string): Response {
+export function createConfigurationErrorResponse(
+  error: string,
+  request?: Request
+): Response {
   // Use the error message directly without formatting
+  const corsHeaders = request
+    ? getCorsHeaders(request)
+    : getCorsHeaders(new Request("http://localhost"));
+
   return new Response(
     JSON.stringify({
       success: false,
@@ -288,7 +314,7 @@ export function createConfigurationErrorResponse(error: string): Response {
     }),
     {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
   );
 }
