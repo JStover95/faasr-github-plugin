@@ -61,15 +61,20 @@ supabase login
    - Contents: Read & write
    - Actions: Read & write
    - Metadata: Read
-4. Save App ID, Client ID, Client Secret, and Private Key
+4. **Set the Authorization callback URL:**
+   - **For local development** (if using `supabase start`): `http://localhost:54321/functions/v1/auth/callback`
+   - **For production** (after Supabase setup): `https://your-project-ref.supabase.co/functions/v1/auth/callback`
+
+   **Note**: Replace `your-project-ref` with your actual Supabase project reference ID. If you haven't set up Supabase yet, you can use a placeholder and update it later in your GitHub App settings.
+5. Save App ID, Client ID, Client Secret, and Private Key
 
 ### 3. Set Up Supabase
 
 1. Create a Supabase project at [Supabase Dashboard](https://app.supabase.com)
-2. Initialize Supabase in your project:
+2. Log in to supabase from the `supabase` directory:
 
    ```bash
-   supabase init
+   supabase login
    ```
 
 3. Link your project:
@@ -93,6 +98,16 @@ supabase login
    ```bash
    openssl rand -base64 32
    ```
+
+5. Configure CORS for local development:
+
+   ```bash
+   # Allow your local frontend origin and enable credentials
+   supabase secrets set CORS_ALLOW_ORIGIN=http://localhost:3000,http://localhost:5173
+   supabase secrets set CORS_ALLOW_CREDENTIALS=true
+   ```
+
+   **Note**: Adjust the ports (`3000`, `5173`) to match your frontend development server port. If your frontend runs on a different port, add it to the comma-separated list.
 
 ### 4. Configure Frontend
 
@@ -166,6 +181,13 @@ Ensure all required environment variables are set in Supabase:
 - `GITHUB_PRIVATE_KEY` - Your GitHub App Private Key (PEM format)
 - `JWT_SECRET` - Strong random secret for JWT signing (minimum 32 characters)
 
+**Optional CORS Configuration:**
+
+- `CORS_ALLOW_ORIGIN` - Comma-separated list of allowed origins (default: `"*"`)
+- `CORS_ALLOW_CREDENTIALS` - Set to `"true"` to allow credentials (default: `"false"`)
+- `CORS_ALLOW_HEADERS` - Comma-separated list of allowed headers (default: `"authorization, x-client-info, apikey, content-type"`)
+- `CORS_ALLOW_METHODS` - Comma-separated list of allowed methods (default: `"GET, POST, PUT, DELETE, OPTIONS"`)
+
 **Set secrets via CLI:**
 
 ```bash
@@ -174,7 +196,17 @@ supabase secrets set GITHUB_CLIENT_ID=your_client_id
 supabase secrets set GITHUB_CLIENT_SECRET=your_client_secret
 supabase secrets set GITHUB_PRIVATE_KEY="$(cat path/to/private-key.pem)"
 supabase secrets set JWT_SECRET=your_jwt_secret
+
+# Configure CORS for production
+supabase secrets set CORS_ALLOW_ORIGIN=https://your-frontend-domain.com
+supabase secrets set CORS_ALLOW_CREDENTIALS=true
 ```
+
+**Important CORS Notes:**
+
+- If `CORS_ALLOW_CREDENTIALS` is `true`, `CORS_ALLOW_ORIGIN` cannot be `"*"` (browsers will reject this)
+- For production, always specify explicit origins in `CORS_ALLOW_ORIGIN`
+- For local development, include all ports your frontend might use (e.g., `http://localhost:3000,http://localhost:5173`)
 
 **Or via Supabase Dashboard:**
 
@@ -213,11 +245,13 @@ supabase secrets set JWT_SECRET=your_jwt_secret
 
 #### 4. Update GitHub App Settings
 
-In your GitHub App settings, update the callback URL to point to your deployed frontend:
+In your GitHub App settings, update the callback URL to point to your Supabase Edge Function:
 
 - **Homepage URL**: `https://your-frontend-domain.com`
-- **Callback URL**: `https://your-frontend-domain.com/install`
-- **Setup URL**: `https://your-frontend-domain.com/install`
+- **Authorization callback URL**: `https://your-project-ref.supabase.co/functions/v1/auth/callback`
+- **Setup URL** (optional): `https://your-frontend-domain.com/install`
+
+**Note**: Replace `your-project-ref` with your actual Supabase project reference ID (found in Supabase Dashboard → Settings → General).
 
 ### Environment Variables Reference
 
@@ -237,13 +271,35 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 
 Set these as secrets in Supabase (not in `.env` files):
 
-| Variable | Description | Required |
-| ---------- | ------------- | ---------- |
-| `GITHUB_APP_ID` | GitHub App ID from app settings | Yes |
-| `GITHUB_CLIENT_ID` | GitHub App Client ID | Yes |
-| `GITHUB_CLIENT_SECRET` | GitHub App Client Secret | Yes |
-| `GITHUB_PRIVATE_KEY` | GitHub App Private Key (PEM format) | Yes |
-| `JWT_SECRET` | Secret for JWT token signing (min 32 chars) | Yes |
+| Variable | Description | Required | Default |
+| ---------- | ------------- | ---------- | ------- |
+| `GITHUB_APP_ID` | GitHub App ID from app settings | Yes | - |
+| `GITHUB_CLIENT_ID` | GitHub App Client ID | Yes | - |
+| `GITHUB_CLIENT_SECRET` | GitHub App Client Secret | Yes | - |
+| `GITHUB_PRIVATE_KEY` | GitHub App Private Key (PEM format) | Yes | - |
+| `JWT_SECRET` | Secret for JWT token signing (min 32 chars) | Yes | - |
+| `CORS_ALLOW_ORIGIN` | Comma-separated allowed origins (e.g., `http://localhost:3000,https://example.com`) or `*` for wildcard | No | `"*"` |
+| `CORS_ALLOW_CREDENTIALS` | Set to `"true"` to allow credentials in requests | No | `"false"` |
+| `CORS_ALLOW_HEADERS` | Comma-separated allowed headers | No | `"authorization, x-client-info, apikey, content-type"` |
+| `CORS_ALLOW_METHODS` | Comma-separated allowed HTTP methods | No | `"GET, POST, PUT, DELETE, OPTIONS"` |
+
+**CORS Configuration Examples:**
+
+**For local development:**
+
+```bash
+supabase secrets set CORS_ALLOW_ORIGIN=http://localhost:3000,http://localhost:5173
+supabase secrets set CORS_ALLOW_CREDENTIALS=true
+```
+
+**For production:**
+
+```bash
+supabase secrets set CORS_ALLOW_ORIGIN=https://yourdomain.com,https://www.yourdomain.com
+supabase secrets set CORS_ALLOW_CREDENTIALS=true
+```
+
+**Security Note:** When `CORS_ALLOW_CREDENTIALS` is `true`, you must specify explicit origins in `CORS_ALLOW_ORIGIN`. Wildcard (`*`) is not allowed with credentials and will cause browser CORS errors.
 
 ## Development
 
@@ -304,9 +360,21 @@ deno coverage coverage
 
 - Verify `VITE_SUPABASE_URL` is correct in `.env`
 - Check that Edge Functions are deployed
-- Verify CORS is configured correctly (should be handled automatically)
+- Verify CORS is configured correctly:
+  - Check that `CORS_ALLOW_ORIGIN` includes your frontend URL
+  - If using credentials, ensure `CORS_ALLOW_CREDENTIALS=true` and `CORS_ALLOW_ORIGIN` is not `"*"`
+  - Verify the origin in the error message matches what's configured
 
-**5. Rate limit errors:**
+**5. CORS errors in browser console:**
+
+- **Error: "Access-Control-Allow-Origin header must not be the wildcard '*' when the request's credentials mode is 'include'"**
+  - Set `CORS_ALLOW_CREDENTIALS=true` and specify explicit origins in `CORS_ALLOW_ORIGIN` (not `"*"`)
+  - Example: `supabase secrets set CORS_ALLOW_ORIGIN=http://localhost:3000`
+- **Error: "Request origin is not in allowed origins list"**
+  - Add your frontend URL to `CORS_ALLOW_ORIGIN` (comma-separated for multiple origins)
+  - Example: `supabase secrets set CORS_ALLOW_ORIGIN=http://localhost:3000,http://localhost:5173`
+
+**6. Rate limit errors:**
 
 - GitHub API has rate limits (5000 requests/hour for authenticated requests)
 - Wait a few minutes and try again
