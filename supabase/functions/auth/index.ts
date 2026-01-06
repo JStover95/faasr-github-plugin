@@ -8,22 +8,22 @@
  * - POST /auth/logout - Logs out current session
  */
 
-import { corsHeaders } from '../_shared/cors.ts';
+import { getCorsHeaders } from "../_shared/cors.ts";
 import {
   checkInstallationPermissions,
   getInstallation,
   getInstallationToken,
-} from '../_shared/github-app.ts';
+} from "../_shared/github-app.ts";
 import {
   createLogoutCookie,
   createSessionCookie,
   createSessionToken,
   getSessionFromRequest,
-} from '../_shared/auth.ts';
-import { ensureForkExists } from '../_shared/repository.ts';
-import { validateEnvironmentOnStartup } from '../_shared/env-validation.ts';
-import { Octokit } from '../_shared/deps.ts';
-import type { UserSession } from '../_shared/types.ts';
+} from "../_shared/auth.ts";
+import { ensureForkExists } from "../_shared/repository.ts";
+import { validateEnvironmentOnStartup } from "../_shared/env-validation.ts";
+import { Octokit } from "../_shared/deps.ts";
+import type { UserSession } from "../_shared/types.ts";
 
 /**
  * Services object for dependency injection and testing
@@ -41,26 +41,27 @@ export const deps = {
 /**
  * Handle GET /auth/install - Initiate GitHub App installation
  */
-export function handleInstall(_req: Request): Response {
-  const clientId = Deno.env.get('GITHUB_CLIENT_ID');
+export function handleInstall(req: Request): Response {
+  const corsHeaders = getCorsHeaders(req);
+  const clientId = Deno.env.get("GITHUB_CLIENT_ID");
   if (!clientId) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: 'GitHub App client ID not configured',
+        error: "GitHub App client ID not configured",
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 
   // Build GitHub App installation URL
   const githubInstallUrl = new URL(
-    'https://github.com/apps/faasr/installations/new',
+    "https://github.com/apps/faasr/installations/new"
   );
-  githubInstallUrl.searchParams.set('state', 'install');
+  githubInstallUrl.searchParams.set("state", "install");
 
   // Redirect to GitHub App installation page
   return new Response(null, {
@@ -76,36 +77,37 @@ export function handleInstall(_req: Request): Response {
  * Handle GET /auth/callback - Handle GitHub App installation callback
  */
 export async function handleCallback(req: Request): Promise<Response> {
+  const corsHeaders = getCorsHeaders(req);
   try {
     const url = new URL(req.url);
-    const installationId = url.searchParams.get('installation_id');
+    const installationId = url.searchParams.get("installation_id");
 
     if (!installationId) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Missing installation_id parameter',
+          error: "Missing installation_id parameter",
         }),
         {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    const appId = Deno.env.get('GITHUB_APP_ID');
-    const privateKey = Deno.env.get('GITHUB_PRIVATE_KEY');
+    const appId = Deno.env.get("GITHUB_APP_ID");
+    const privateKey = Deno.env.get("GITHUB_PRIVATE_KEY");
 
     if (!appId || !privateKey) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'GitHub App configuration missing',
+          error: "GitHub App configuration missing",
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -113,27 +115,27 @@ export async function handleCallback(req: Request): Promise<Response> {
     const installation = await deps.getInstallation(
       appId,
       privateKey,
-      installationId,
+      installationId
     );
 
     // Validate permissions
     const permissionCheck = await deps.checkInstallationPermissions(
       appId,
       privateKey,
-      installationId,
+      installationId
     );
 
     if (!permissionCheck.valid) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Missing required permissions',
+          error: "Missing required permissions",
           details: permissionCheck.missingPermissions,
         }),
         {
           status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -141,20 +143,20 @@ export async function handleCallback(req: Request): Promise<Response> {
     const { token } = await deps.getInstallationToken(
       appId,
       privateKey,
-      installationId,
+      installationId
     );
     const octokit = new Octokit({ auth: token });
 
     // Ensure fork exists
     const fork = await deps.ensureForkExists(
       octokit,
-      installation.account.login,
+      installation.account.login
     );
 
     // Create session
     const sessionData: Omit<
       UserSession,
-      'jwtToken' | 'createdAt' | 'expiresAt'
+      "jwtToken" | "createdAt" | "expiresAt"
     > = {
       installationId,
       userLogin: installation.account.login,
@@ -169,7 +171,7 @@ export async function handleCallback(req: Request): Promise<Response> {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Installation successful',
+        message: "Installation successful",
         user: {
           login: installation.account.login,
           id: installation.account.id,
@@ -186,24 +188,24 @@ export async function handleCallback(req: Request): Promise<Response> {
         status: 200,
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/json',
-          'Set-Cookie': cookie,
+          "Content-Type": "application/json",
+          "Set-Cookie": cookie,
         },
-      },
+      }
     );
   } catch (error) {
-    console.error('Callback error:', error);
+    console.error("Callback error:", error);
 
     // Provide user-friendly error messages
-    let errorMessage = 'Installation failed';
+    let errorMessage = "Installation failed";
     if (error instanceof Error) {
-      if (error.message.includes('rate limit')) {
-        errorMessage = 'Too many requests. Please try again in a few minutes.';
-      } else if (error.message.includes('permission')) {
+      if (error.message.includes("rate limit")) {
+        errorMessage = "Too many requests. Please try again in a few minutes.";
+      } else if (error.message.includes("permission")) {
         errorMessage =
-          'The app needs additional permissions. Please reinstall.';
-      } else if (error.message.includes('not found')) {
-        errorMessage = 'Fork not found. Please try installing again.';
+          "The app needs additional permissions. Please reinstall.";
+      } else if (error.message.includes("not found")) {
+        errorMessage = "Fork not found. Please try installing again.";
       } else {
         errorMessage = error.message;
       }
@@ -216,8 +218,8 @@ export async function handleCallback(req: Request): Promise<Response> {
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 }
@@ -226,6 +228,7 @@ export async function handleCallback(req: Request): Promise<Response> {
  * Handle GET /auth/session - Get current session status
  */
 export function handleGetSession(req: Request): Response {
+  const corsHeaders = getCorsHeaders(req);
   const session = getSessionFromRequest(req);
 
   if (!session) {
@@ -235,8 +238,8 @@ export function handleGetSession(req: Request): Response {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 
@@ -251,30 +254,31 @@ export function handleGetSession(req: Request): Response {
     }),
     {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
   );
 }
 
 /**
  * Handle POST /auth/logout - Log out current session
  */
-export function handleLogout(_req: Request): Response {
+export function handleLogout(req: Request): Response {
+  const corsHeaders = getCorsHeaders(req);
   const logoutCookie = createLogoutCookie();
 
   return new Response(
     JSON.stringify({
       success: true,
-      message: 'Logged out successfully',
+      message: "Logged out successfully",
     }),
     {
       status: 200,
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/json',
-        'Set-Cookie': logoutCookie,
+        "Content-Type": "application/json",
+        "Set-Cookie": logoutCookie,
       },
-    },
+    }
   );
 }
 
@@ -286,13 +290,15 @@ if (import.meta.main) {
   try {
     validateEnvironmentOnStartup();
   } catch (error) {
-    console.error('Environment validation failed:', error);
+    console.error("Environment validation failed:", error);
     // Don't throw here - let individual handlers handle missing env vars gracefully
   }
 
   Deno.serve(async (req: Request) => {
+    const corsHeaders = getCorsHeaders(req);
+
     // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
+    if (req.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
@@ -303,37 +309,37 @@ if (import.meta.main) {
 
     try {
       // Route to appropriate handler
-      if (path === '/auth/install' && req.method === 'GET') {
+      if (path === "/auth/install" && req.method === "GET") {
         return handleInstall(req);
-      } else if (path === '/auth/callback' && req.method === 'GET') {
+      } else if (path === "/auth/callback" && req.method === "GET") {
         return await handleCallback(req);
-      } else if (path === '/auth/session' && req.method === 'GET') {
+      } else if (path === "/auth/session" && req.method === "GET") {
         return handleGetSession(req);
-      } else if (path === '/auth/logout' && req.method === 'POST') {
+      } else if (path === "/auth/logout" && req.method === "POST") {
         return handleLogout(req);
       } else {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Not found',
+            error: "Not found",
           }),
           {
             status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          },
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
         );
       }
     } catch (error) {
-      console.error('Edge Function error:', error);
+      console.error("Edge Function error:", error);
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Internal server error',
+          error: "Internal server error",
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
   });

@@ -6,19 +6,19 @@
  * - GET /workflows/status/{fileName} - Returns workflow registration status
  */
 
-import { corsHeaders } from '../_shared/cors.ts';
-import { getSessionFromRequest } from '../_shared/auth.ts';
-import { GitHubClientService } from '../_shared/github-client.ts';
-import { WorkflowUploadService } from '../_shared/workflow-upload-service.ts';
-import { WorkflowStatusService } from '../_shared/workflow-status-service.ts';
-import { validateEnvironmentOnStartup } from '../_shared/env-validation.ts';
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { getSessionFromRequest } from "../_shared/auth.ts";
+import { GitHubClientService } from "../_shared/github-client.ts";
+import { WorkflowUploadService } from "../_shared/workflow-upload-service.ts";
+import { WorkflowStatusService } from "../_shared/workflow-status-service.ts";
+import { validateEnvironmentOnStartup } from "../_shared/env-validation.ts";
 import {
   createAuthErrorResponse,
   createConfigurationErrorResponse,
   createErrorResponse,
   createNotFoundErrorResponse,
   createValidationErrorResponse,
-} from '../_shared/error-handler.ts';
+} from "../_shared/error-handler.ts";
 
 /**
  * Services object for dependency injection and testing
@@ -38,7 +38,7 @@ export async function parseFormData(req: Request): Promise<{
   fileName: string | null;
 }> {
   const formData = await req.formData();
-  const file = formData.get('file') as File | null;
+  const file = formData.get("file") as File | null;
   const fileName = file?.name || null;
 
   return { file, fileName };
@@ -48,18 +48,19 @@ export async function parseFormData(req: Request): Promise<{
  * Handle POST /workflows/upload - Upload and register workflow JSON file
  */
 export async function handleUpload(req: Request): Promise<Response> {
+  const corsHeaders = getCorsHeaders(req);
   try {
     // Validate session
     const session = getSessionFromRequest(req);
     if (!session) {
-      return createAuthErrorResponse();
+      return createAuthErrorResponse(req);
     }
 
     // Parse FormData
     const { file, fileName } = await parseFormData(req);
 
     if (!file || !fileName) {
-      return createValidationErrorResponse('File is required');
+      return createValidationErrorResponse("File is required", undefined, req);
     }
 
     // Initialize services
@@ -70,20 +71,20 @@ export async function handleUpload(req: Request): Promise<Response> {
     const uploadResult = await uploadService.uploadWorkflow(
       session,
       file,
-      fileName,
+      fileName
     );
 
     // Trigger registration workflow
     const registrationResult = await uploadService.triggerRegistration(
       session,
-      uploadResult.fileName,
+      uploadResult.fileName
     );
 
     // Return success response
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Workflow uploaded and registration triggered',
+        message: "Workflow uploaded and registration triggered",
         fileName: uploadResult.fileName,
         commitSha: uploadResult.commitSha,
         workflowRunId: registrationResult.workflowRunId,
@@ -91,28 +92,28 @@ export async function handleUpload(req: Request): Promise<Response> {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error("Upload error:", error);
 
     // Handle validation errors
-    if (error instanceof Error && error.message.startsWith('Invalid file:')) {
-      const errors = error.message.replace('Invalid file: ', '').split(', ');
-      return createValidationErrorResponse('Invalid file', errors);
+    if (error instanceof Error && error.message.startsWith("Invalid file:")) {
+      const errors = error.message.replace("Invalid file: ", "").split(", ");
+      return createValidationErrorResponse("Invalid file", errors, req);
     }
 
     // Handle configuration errors
     if (
       error instanceof Error &&
-      error.message.includes('GitHub App configuration missing')
+      error.message.includes("GitHub App configuration missing")
     ) {
-      return createConfigurationErrorResponse(error.message);
+      return createConfigurationErrorResponse(error.message, req);
     }
 
     // Handle other errors
-    return createErrorResponse(error, 500, 'Upload failed');
+    return createErrorResponse(error, 500, "Upload failed", req);
   }
 }
 
@@ -121,13 +122,14 @@ export async function handleUpload(req: Request): Promise<Response> {
  */
 export async function handleStatus(
   req: Request,
-  fileName: string,
+  fileName: string
 ): Promise<Response> {
+  const corsHeaders = getCorsHeaders(req);
   try {
     // Validate session
     const session = getSessionFromRequest(req);
     if (!session) {
-      return createAuthErrorResponse();
+      return createAuthErrorResponse(req);
     }
 
     // Initialize services
@@ -150,30 +152,35 @@ export async function handleStatus(
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (error) {
-    console.error('Status error:', error);
+    console.error("Status error:", error);
 
     // Handle not found errors
     if (
       error instanceof Error &&
-      error.message.includes('Workflow run not found')
+      error.message.includes("Workflow run not found")
     ) {
-      return createNotFoundErrorResponse(error.message);
+      return createNotFoundErrorResponse(error.message, req);
     }
 
     // Handle configuration errors
     if (
       error instanceof Error &&
-      error.message.includes('GitHub App configuration missing')
+      error.message.includes("GitHub App configuration missing")
     ) {
-      return createConfigurationErrorResponse(error.message);
+      return createConfigurationErrorResponse(error.message, req);
     }
 
     // Handle other errors
-    return createErrorResponse(error, 500, 'Failed to get workflow status');
+    return createErrorResponse(
+      error,
+      500,
+      "Failed to get workflow status",
+      req
+    );
   }
 }
 
@@ -185,13 +192,15 @@ if (import.meta.main) {
   try {
     validateEnvironmentOnStartup();
   } catch (error) {
-    console.error('Environment validation failed:', error);
+    console.error("Environment validation failed:", error);
     // Don't throw here - let individual handlers handle missing env vars gracefully
   }
 
   Deno.serve(async (req: Request) => {
+    const corsHeaders = getCorsHeaders(req);
+
     // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
+    if (req.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
@@ -202,10 +211,11 @@ if (import.meta.main) {
 
     try {
       // Route to appropriate handler
-      if (path === '/workflows/upload' && req.method === 'POST') {
+      if (path === "/workflows/upload" && req.method === "POST") {
         return await handleUpload(req);
       } else if (
-        path.startsWith('/workflows/status/') && req.method === 'GET'
+        path.startsWith("/workflows/status/") &&
+        req.method === "GET"
       ) {
         // Extract fileName from path
         const fileNameMatch = path.match(/\/workflows\/status\/(.+)$/);
@@ -213,12 +223,12 @@ if (import.meta.main) {
           return new Response(
             JSON.stringify({
               success: false,
-              error: 'File name is required',
+              error: "File name is required",
             }),
             {
               status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            },
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
           );
         }
         const fileName = decodeURIComponent(fileNameMatch[1]);
@@ -227,25 +237,25 @@ if (import.meta.main) {
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Not found',
+            error: "Not found",
           }),
           {
             status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          },
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
         );
       }
     } catch (error) {
-      console.error('Edge Function error:', error);
+      console.error("Edge Function error:", error);
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Internal server error',
+          error: "Internal server error",
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
   });
