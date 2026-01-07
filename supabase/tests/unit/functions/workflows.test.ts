@@ -4,14 +4,14 @@
  * Tests workflow file upload, status retrieval, and FormData parsing
  */
 
-import { assert, assertEquals } from 'jsr:@std/assert@1.0.16';
-import { stub } from 'jsr:@std/testing@1.0.16/mock';
+import { assert, assertEquals } from "jsr:@std/assert@1.0.16";
+import { stub } from "jsr:@std/testing@1.0.16/mock";
 import {
   deps,
   handleStatus,
   handleUpload,
   parseFormData,
-} from '../../../functions/workflows/index.ts';
+} from "../../../functions/workflows/index.ts";
 import {
   createMockRequest,
   createMockWorkflowStatusService,
@@ -19,39 +19,42 @@ import {
   createTestUserSession,
   restoreEnvState,
   saveEnvState,
-} from './_shared/test-utils.ts';
+} from "./_shared/test-utils.ts";
 
 // ============================================================================
 // Tests for parseFormData
 // ============================================================================
 
-Deno.test('parseFormData - extracts file and fileName from FormData', async () => {
+Deno.test(
+  "parseFormData - extracts file and fileName from FormData",
+  async () => {
+    const formData = new FormData();
+    const file = new File(['{"name": "test"}'], "test-workflow.json", {
+      type: "application/json",
+    });
+    formData.append("file", file);
+
+    const req = createMockRequest({
+      method: "POST",
+      url: "https://example.com/workflows/upload",
+      body: formData,
+    });
+
+    const result = await parseFormData(req);
+
+    assert(result.file !== null);
+    assertEquals(result.fileName, "test-workflow.json");
+    assertEquals(result.file.name, "test-workflow.json");
+  }
+);
+
+Deno.test("parseFormData - returns null when no file is present", async () => {
   const formData = new FormData();
-  const file = new File(['{"name": "test"}'], 'test-workflow.json', {
-    type: 'application/json',
-  });
-  formData.append('file', file);
+  formData.append("other", "value");
 
   const req = createMockRequest({
-    method: 'POST',
-    url: 'https://example.com/workflows/upload',
-    body: formData,
-  });
-
-  const result = await parseFormData(req);
-
-  assert(result.file !== null);
-  assertEquals(result.fileName, 'test-workflow.json');
-  assertEquals(result.file.name, 'test-workflow.json');
-});
-
-Deno.test('parseFormData - returns null when no file is present', async () => {
-  const formData = new FormData();
-  formData.append('other', 'value');
-
-  const req = createMockRequest({
-    method: 'POST',
-    url: 'https://example.com/workflows/upload',
+    method: "POST",
+    url: "https://example.com/workflows/upload",
     body: formData,
   });
 
@@ -61,12 +64,12 @@ Deno.test('parseFormData - returns null when no file is present', async () => {
   assertEquals(result.fileName, null);
 });
 
-Deno.test('parseFormData - handles empty FormData', async () => {
+Deno.test("parseFormData - handles empty FormData", async () => {
   const formData = new FormData();
 
   const req = createMockRequest({
-    method: 'POST',
-    url: 'https://example.com/workflows/upload',
+    method: "POST",
+    url: "https://example.com/workflows/upload",
     body: formData,
   });
 
@@ -80,10 +83,10 @@ Deno.test('parseFormData - handles empty FormData', async () => {
 // Tests for handleUpload
 // ============================================================================
 
-Deno.test('handleUpload - returns auth error when no session', async () => {
+Deno.test("handleUpload - returns auth error when no session", async () => {
   const req = createMockRequest({
-    method: 'POST',
-    url: 'https://example.com/workflows/upload',
+    method: "POST",
+    url: "https://example.com/workflows/upload",
   });
 
   const response = await handleUpload(req);
@@ -91,370 +94,376 @@ Deno.test('handleUpload - returns auth error when no session', async () => {
   assertEquals(response.status, 401);
   const body = await response.json();
   assertEquals(body.success, false);
-  assertEquals(body.error, 'Authentication required');
+  assertEquals(body.error, "Authentication required");
 });
 
-Deno.test('handleUpload - returns validation error when file is missing', async () => {
-  const saved = saveEnvState(['JWT_SECRET']);
-  try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
+Deno.test(
+  "handleUpload - returns validation error when file is missing",
+  async () => {
+    const saved = saveEnvState(["SUPABASE_URL", "SUPABASE_ANON_KEY"]);
+    try {
+      Deno.env.set("SUPABASE_URL", "https://test.supabase.co");
+      Deno.env.set("SUPABASE_ANON_KEY", "test-anon-key");
 
-    const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
-    );
+      const session = createTestUserSession();
+      const getUserStub = stub(deps, "getUserFromRequest", () =>
+        Promise.resolve(session)
+      );
 
-    const formData = new FormData();
+      try {
+        const formData = new FormData();
 
-    const req = createMockRequest({
-      method: 'POST',
-      url: 'https://example.com/workflows/upload',
-      headers: {
-        cookie: `faasr_session=${encodeURIComponent(token)}`,
-      },
-      body: formData,
-    });
+        const req = createMockRequest({
+          method: "POST",
+          url: "https://example.com/workflows/upload",
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+          body: formData,
+        });
 
-    const response = await handleUpload(req);
+        const response = await handleUpload(req);
 
-    assertEquals(response.status, 400);
-    const body = await response.json();
-    assertEquals(body.success, false);
-    assert(
-      body.error.includes('File is required') ||
-        body.error.includes('required'),
-    );
-  } finally {
-    restoreEnvState(saved);
+        assertEquals(response.status, 400);
+        const body = await response.json();
+        assertEquals(body.success, false);
+        assert(
+          body.error.includes("File is required") ||
+            body.error.includes("required")
+        );
+      } finally {
+        getUserStub.restore();
+      }
+    } finally {
+      restoreEnvState(saved);
+    }
   }
-});
+);
 
-Deno.test('handleUpload - returns error when GitHub App config is missing', async () => {
-  const saved = saveEnvState([
-    'JWT_SECRET',
-    'GITHUB_APP_ID',
-    'GITHUB_PRIVATE_KEY',
-  ]);
-  try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
-    Deno.env.delete('GITHUB_APP_ID');
-    Deno.env.delete('GITHUB_PRIVATE_KEY');
+Deno.test(
+  "handleUpload - returns error when GitHub App config is missing",
+  async () => {
+    const saved = saveEnvState([
+      "JWT_SECRET",
+      "GITHUB_APP_ID",
+      "GITHUB_PRIVATE_KEY",
+    ]);
+    try {
+      Deno.env.set("JWT_SECRET", "test-secret-key");
+      Deno.env.delete("GITHUB_APP_ID");
+      Deno.env.delete("GITHUB_PRIVATE_KEY");
 
-    const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
-    );
+      const session = createTestUserSession();
+      const getUserStub = stub(deps, "getUserFromRequest", () =>
+        Promise.resolve(session)
+      );
 
-    const formData = new FormData();
-    const file = new File(['{"name": "test"}'], 'test-workflow.json');
-    formData.append('file', file);
+      try {
+        const formData = new FormData();
+        const file = new File(['{"name": "test"}'], "test-workflow.json");
+        formData.append("file", file);
 
-    const req = createMockRequest({
-      method: 'POST',
-      url: 'https://example.com/workflows/upload',
-      headers: {
-        cookie: `faasr_session=${encodeURIComponent(token)}`,
-      },
-      body: formData,
-    });
+        const req = createMockRequest({
+          method: "POST",
+          url: "https://example.com/workflows/upload",
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+          body: formData,
+        });
 
-    const response = await handleUpload(req);
+        const response = await handleUpload(req);
 
-    // Should return configuration error
-    assertEquals(response.status, 500);
-    const body = await response.json();
-    assertEquals(body.success, false);
-    assert(
-      body.error.includes('GitHub App configuration missing') ||
-        body.error.includes('configuration'),
-    );
-  } finally {
-    restoreEnvState(saved);
+        // Should return configuration error
+        assertEquals(response.status, 500);
+        const body = await response.json();
+        assertEquals(body.success, false);
+        assert(
+          body.error.includes("GitHub App configuration missing") ||
+            body.error.includes("configuration")
+        );
+      } finally {
+        getUserStub.restore();
+      }
+    } finally {
+      restoreEnvState(saved);
+    }
   }
-});
+);
 
-Deno.test('handleUpload - handles validation errors from service', async () => {
-  const saved = saveEnvState(['JWT_SECRET']);
+Deno.test("handleUpload - handles validation errors from service", async () => {
+  const saved = saveEnvState(["JWT_SECRET"]);
   try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
+    Deno.env.set("JWT_SECRET", "test-secret-key");
 
     const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
-    );
-
-    const formData = new FormData();
-    // Create an invalid file (empty or malformed)
-    const file = new File([''], 'invalid.json');
-    formData.append('file', file);
-
-    const req = createMockRequest({
-      method: 'POST',
-      url: 'https://example.com/workflows/upload',
-      headers: {
-        cookie: `faasr_session=${encodeURIComponent(token)}`,
-      },
-      body: formData,
-    });
-
-    const response = await handleUpload(req);
-
-    // Should return validation error or configuration error
-    assert(response.status >= 400);
-    const body = await response.json();
-    assertEquals(body.success, false);
-  } finally {
-    restoreEnvState(saved);
-  }
-});
-
-Deno.test('handleUpload - handles validation errors with specific format', async () => {
-  const saved = saveEnvState(['JWT_SECRET']);
-  try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
-
-    const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
-    );
-
-    const mockUploadService = createMockWorkflowUploadService({
-      uploadWorkflow: () => {
-        throw new Error('Invalid file: File too large, Invalid JSON format');
-      },
-    });
-
-    const uploadServiceStub = stub(
-      deps,
-      'WorkflowUploadService',
-      () => mockUploadService,
-    );
-
-    const githubClientStub = stub(
-      deps,
-      'GitHubClientService',
-      () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>),
+    const getUserStub = stub(deps, "getUserFromRequest", () =>
+      Promise.resolve(session)
     );
 
     try {
       const formData = new FormData();
-      const file = new File(['{"invalid": json}'], 'test.json');
-      formData.append('file', file);
+      // Create an invalid file (empty or malformed)
+      const file = new File([""], "invalid.json");
+      formData.append("file", file);
 
       const req = createMockRequest({
-        method: 'POST',
-        url: 'https://example.com/workflows/upload',
+        method: "POST",
+        url: "https://example.com/workflows/upload",
         headers: {
-          cookie: `faasr_session=${encodeURIComponent(token)}`,
+          Authorization: "Bearer test-token",
         },
         body: formData,
       });
 
       const response = await handleUpload(req);
 
-      assertEquals(response.status, 400);
+      // Should return validation error or configuration error
+      assert(response.status >= 400);
       const body = await response.json();
       assertEquals(body.success, false);
-      assertEquals(body.error, 'Invalid file');
-      assert(Array.isArray(body.details));
     } finally {
-      uploadServiceStub.restore();
-      githubClientStub.restore();
+      getUserStub.restore();
     }
   } finally {
     restoreEnvState(saved);
   }
 });
 
-Deno.test('handleStatus - handles not found errors with specific message', async () => {
-  const saved = saveEnvState(['JWT_SECRET']);
-  try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
-
-    const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
-    );
-
-    const mockStatusService = createMockWorkflowStatusService({
-      getWorkflowStatus: () => {
-        throw new Error('Workflow run not found');
-      },
-    });
-
-    const statusServiceStub = stub(
-      deps,
-      'WorkflowStatusService',
-      () => mockStatusService,
-    );
-
-    const githubClientStub = stub(
-      deps,
-      'GitHubClientService',
-      () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>),
-    );
-
+Deno.test(
+  "handleUpload - handles validation errors with specific format",
+  async () => {
+    const saved = saveEnvState(["JWT_SECRET"]);
     try {
-      const req = createMockRequest({
-        method: 'GET',
-        url: 'https://example.com/workflows/status/nonexistent.json',
-        headers: {
-          cookie: `faasr_session=${encodeURIComponent(token)}`,
+      Deno.env.set("JWT_SECRET", "test-secret-key");
+
+      const session = createTestUserSession();
+      const getUserStub = stub(deps, "getUserFromRequest", () =>
+        Promise.resolve(session)
+      );
+
+      const { jwt } = await import("../../../functions/_shared/deps.ts");
+      const token = jwt.sign(
+        {
+          installationId: session.installationId,
+          userLogin: session.userLogin,
+          userId: session.userId,
+          avatarUrl: session.avatarUrl,
+        },
+        "test-secret-key",
+        { algorithm: "HS256", expiresIn: "24h" }
+      );
+
+      const mockUploadService = createMockWorkflowUploadService({
+        uploadWorkflow: () => {
+          throw new Error("Invalid file: File too large, Invalid JSON format");
         },
       });
 
-      const response = await handleStatus(req, 'nonexistent.json');
+      const uploadServiceStub = stub(
+        deps,
+        "WorkflowUploadService",
+        () => mockUploadService
+      );
 
-      assertEquals(response.status, 404);
-      const body = await response.json();
-      assertEquals(body.success, false);
-      assert(body.error.includes('Workflow run not found'));
+      const githubClientStub = stub(
+        deps,
+        "GitHubClientService",
+        () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>)
+      );
+
+      try {
+        const formData = new FormData();
+        const file = new File(['{"invalid": json}'], "test.json");
+        formData.append("file", file);
+
+        const req = createMockRequest({
+          method: "POST",
+          url: "https://example.com/workflows/upload",
+          headers: {
+            cookie: `faasr_session=${encodeURIComponent(token)}`,
+          },
+          body: formData,
+        });
+
+        const response = await handleUpload(req);
+
+        assertEquals(response.status, 400);
+        const body = await response.json();
+        assertEquals(body.success, false);
+        assertEquals(body.error, "Invalid file");
+        assert(Array.isArray(body.details));
+      } finally {
+        getUserStub.restore();
+        uploadServiceStub.restore();
+        githubClientStub.restore();
+      }
     } finally {
-      statusServiceStub.restore();
-      githubClientStub.restore();
+      restoreEnvState(saved);
     }
-  } finally {
-    restoreEnvState(saved);
   }
-});
+);
+
+Deno.test(
+  "handleStatus - handles not found errors with specific message",
+  async () => {
+    const saved = saveEnvState(["JWT_SECRET"]);
+    try {
+      Deno.env.set("JWT_SECRET", "test-secret-key");
+
+      const session = createTestUserSession();
+      const getUserStub = stub(deps, "getUserFromRequest", () =>
+        Promise.resolve(session)
+      );
+
+      const { jwt } = await import("../../../functions/_shared/deps.ts");
+      const token = jwt.sign(
+        {
+          installationId: session.installationId,
+          userLogin: session.userLogin,
+          userId: session.userId,
+          avatarUrl: session.avatarUrl,
+        },
+        "test-secret-key",
+        { algorithm: "HS256", expiresIn: "24h" }
+      );
+
+      const mockStatusService = createMockWorkflowStatusService({
+        getWorkflowStatus: () => {
+          throw new Error("Workflow run not found");
+        },
+      });
+
+      const statusServiceStub = stub(
+        deps,
+        "WorkflowStatusService",
+        () => mockStatusService
+      );
+
+      const githubClientStub = stub(
+        deps,
+        "GitHubClientService",
+        () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>)
+      );
+
+      try {
+        const req = createMockRequest({
+          method: "GET",
+          url: "https://example.com/workflows/status/nonexistent.json",
+          headers: {
+            cookie: `faasr_session=${encodeURIComponent(token)}`,
+          },
+        });
+
+        const response = await handleStatus(req, "nonexistent.json");
+
+        assertEquals(response.status, 404);
+        const body = await response.json();
+        assertEquals(body.success, false);
+        assert(body.error.includes("Workflow run not found"));
+      } finally {
+        getUserStub.restore();
+        statusServiceStub.restore();
+        githubClientStub.restore();
+      }
+    } finally {
+      restoreEnvState(saved);
+    }
+  }
+);
 
 // ============================================================================
 // Tests for handleStatus
 // ============================================================================
 
-Deno.test('handleStatus - returns auth error when no session', async () => {
+Deno.test("handleStatus - returns auth error when no session", async () => {
   const req = createMockRequest({
-    method: 'GET',
-    url: 'https://example.com/workflows/status/test.json',
+    method: "GET",
+    url: "https://example.com/workflows/status/test.json",
   });
 
-  const response = await handleStatus(req, 'test.json');
+  const response = await handleStatus(req, "test.json");
 
   assertEquals(response.status, 401);
   const body = await response.json();
   assertEquals(body.success, false);
-  assertEquals(body.error, 'Authentication required');
+  assertEquals(body.error, "Authentication required");
 });
 
-Deno.test('handleStatus - returns error when GitHub App config is missing', async () => {
-  const saved = saveEnvState([
-    'JWT_SECRET',
-    'GITHUB_APP_ID',
-    'GITHUB_PRIVATE_KEY',
-  ]);
-  try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
-    Deno.env.delete('GITHUB_APP_ID');
-    Deno.env.delete('GITHUB_PRIVATE_KEY');
+Deno.test(
+  "handleStatus - returns error when GitHub App config is missing",
+  async () => {
+    const saved = saveEnvState([
+      "JWT_SECRET",
+      "GITHUB_APP_ID",
+      "GITHUB_PRIVATE_KEY",
+    ]);
+    try {
+      Deno.env.set("JWT_SECRET", "test-secret-key");
+      Deno.env.delete("GITHUB_APP_ID");
+      Deno.env.delete("GITHUB_PRIVATE_KEY");
 
-    const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
-    );
+      const session = createTestUserSession();
+      const getUserStub = stub(deps, "getUserFromRequest", () =>
+        Promise.resolve(session)
+      );
 
-    const req = createMockRequest({
-      method: 'GET',
-      url: 'https://example.com/workflows/status/test.json',
-      headers: {
-        cookie: `faasr_session=${encodeURIComponent(token)}`,
-      },
-    });
+      try {
+        const req = createMockRequest({
+          method: "GET",
+          url: "https://example.com/workflows/status/test.json",
+          headers: {
+            Authorization: "Bearer test-token",
+          },
+        });
 
-    const response = await handleStatus(req, 'test.json');
+        const response = await handleStatus(req, "test.json");
 
-    // Should return configuration error
-    assertEquals(response.status, 500);
-    const body = await response.json();
-    assertEquals(body.success, false);
-    assert(
-      body.error.includes('GitHub App configuration missing') ||
-        body.error.includes('configuration'),
-    );
-  } finally {
-    restoreEnvState(saved);
+        // Should return configuration error
+        assertEquals(response.status, 500);
+        const body = await response.json();
+        assertEquals(body.success, false);
+        assert(
+          body.error.includes("GitHub App configuration missing") ||
+            body.error.includes("configuration")
+        );
+      } finally {
+        getUserStub.restore();
+      }
+    } finally {
+      restoreEnvState(saved);
+    }
   }
-});
+);
 
-Deno.test('handleStatus - handles not found errors', async () => {
-  const saved = saveEnvState(['JWT_SECRET']);
+Deno.test("handleStatus - handles not found errors", async () => {
+  const saved = saveEnvState(["JWT_SECRET"]);
   try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
+    Deno.env.set("JWT_SECRET", "test-secret-key");
 
     const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
+    const getUserStub = stub(deps, "getUserFromRequest", () =>
+      Promise.resolve(session)
     );
 
-    const req = createMockRequest({
-      method: 'GET',
-      url: 'https://example.com/workflows/status/nonexistent.json',
-      headers: {
-        cookie: `faasr_session=${encodeURIComponent(token)}`,
-      },
-    });
+    try {
+      const req = createMockRequest({
+        method: "GET",
+        url: "https://example.com/workflows/status/nonexistent.json",
+        headers: {
+          Authorization: "Bearer test-token",
+        },
+      });
 
-    const response = await handleStatus(req, 'nonexistent.json');
+      const response = await handleStatus(req, "nonexistent.json");
 
-    // Should return not found error or configuration error
-    assert(response.status >= 400);
-    const body = await response.json();
-    assertEquals(body.success, false);
+      // Should return not found error or configuration error
+      assert(response.status >= 400);
+      const body = await response.json();
+      assertEquals(body.success, false);
+    } finally {
+      getUserStub.restore();
+    }
   } finally {
     restoreEnvState(saved);
   }
@@ -464,106 +473,118 @@ Deno.test('handleStatus - handles not found errors', async () => {
 // Success path tests for handleUpload
 // ============================================================================
 
-Deno.test('handleUpload - successful upload with valid workflow file', async () => {
-  const saved = saveEnvState(['JWT_SECRET']);
-  try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
-
-    const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
-    const token = jwt.sign(
-      {
-        installationId: session.installationId,
-        userLogin: session.userLogin,
-        userId: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
-    );
-
-    const mockUploadService = createMockWorkflowUploadService({
-      uploadWorkflow: async () =>
-        await Promise.resolve({
-          fileName: 'test-workflow.json',
-          commitSha: 'abc123def456',
-        }),
-      triggerRegistration: async () =>
-        await Promise.resolve({
-          workflowRunId: 12345,
-          workflowRunUrl: 'https://github.com/test/workflows/runs/12345',
-        }),
-    });
-
-    // Stub the service constructor
-    const uploadServiceStub = stub(
-      deps,
-      'WorkflowUploadService',
-      () => mockUploadService,
-    );
-
-    const githubClientStub = stub(
-      deps,
-      'GitHubClientService',
-      () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>),
-    );
-
+Deno.test(
+  "handleUpload - successful upload with valid workflow file",
+  async () => {
+    const saved = saveEnvState(["JWT_SECRET"]);
     try {
-      const formData = new FormData();
-      const file = new File(
-        ['{"name": "test-workflow"}'],
-        'test-workflow.json',
-        {
-          type: 'application/json',
-        },
-      );
-      formData.append('file', file);
+      Deno.env.set("JWT_SECRET", "test-secret-key");
 
-      const req = createMockRequest({
-        method: 'POST',
-        url: 'https://example.com/workflows/upload',
-        headers: {
-          cookie: `faasr_session=${encodeURIComponent(token)}`,
+      const session = createTestUserSession();
+      const { jwt } = await import("../../../functions/_shared/deps.ts");
+      const token = jwt.sign(
+        {
+          installationId: session.installationId,
+          userLogin: session.userLogin,
+          userId: session.userId,
+          avatarUrl: session.avatarUrl,
         },
-        body: formData,
+        "test-secret-key",
+        { algorithm: "HS256", expiresIn: "24h" }
+      );
+
+      const getUserStub = stub(deps, "getUserFromRequest", () =>
+        Promise.resolve(session)
+      );
+
+      const mockUploadService = createMockWorkflowUploadService({
+        uploadWorkflow: async () =>
+          await Promise.resolve({
+            fileName: "test-workflow.json",
+            commitSha: "abc123def456",
+          }),
+        triggerRegistration: async () =>
+          await Promise.resolve({
+            workflowRunId: 12345,
+            workflowRunUrl: "https://github.com/test/workflows/runs/12345",
+          }),
       });
 
-      const response = await handleUpload(req);
+      // Stub the service constructor
+      const uploadServiceStub = stub(
+        deps,
+        "WorkflowUploadService",
+        () => mockUploadService
+      );
 
-      assertEquals(response.status, 200);
-      const body = await response.json();
-      assertEquals(body.success, true);
-      assertEquals(
-        body.message,
-        'Workflow uploaded and registration triggered',
+      const githubClientStub = stub(
+        deps,
+        "GitHubClientService",
+        () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>)
       );
-      assertEquals(body.fileName, 'test-workflow.json');
-      assertEquals(body.commitSha, 'abc123def456');
-      assertEquals(body.workflowRunId, 12345);
-      assertEquals(
-        body.workflowRunUrl,
-        'https://github.com/test/workflows/runs/12345',
-      );
+
+      try {
+        const formData = new FormData();
+        const file = new File(
+          ['{"name": "test-workflow"}'],
+          "test-workflow.json",
+          {
+            type: "application/json",
+          }
+        );
+        formData.append("file", file);
+
+        const req = createMockRequest({
+          method: "POST",
+          url: "https://example.com/workflows/upload",
+          headers: {
+            cookie: `faasr_session=${encodeURIComponent(token)}`,
+          },
+          body: formData,
+        });
+
+        const response = await handleUpload(req);
+
+        assertEquals(response.status, 200);
+        const body = await response.json();
+        assertEquals(body.success, true);
+        assertEquals(
+          body.message,
+          "Workflow uploaded and registration triggered"
+        );
+        assertEquals(body.fileName, "test-workflow.json");
+        assertEquals(body.commitSha, "abc123def456");
+        assertEquals(body.workflowRunId, 12345);
+        assertEquals(
+          body.workflowRunUrl,
+          "https://github.com/test/workflows/runs/12345"
+        );
+      } finally {
+        getUserStub.restore();
+        uploadServiceStub.restore();
+        githubClientStub.restore();
+      }
     } finally {
-      uploadServiceStub.restore();
-      githubClientStub.restore();
+      restoreEnvState(saved);
     }
-  } finally {
-    restoreEnvState(saved);
   }
-});
+);
 
 // ============================================================================
 // Success path tests for handleStatus
 // ============================================================================
 
-Deno.test('handleStatus - successful status retrieval', async () => {
-  const saved = saveEnvState(['JWT_SECRET']);
+Deno.test("handleStatus - successful status retrieval", async () => {
+  const saved = saveEnvState(["JWT_SECRET"]);
   try {
-    Deno.env.set('JWT_SECRET', 'test-secret-key');
+    Deno.env.set("JWT_SECRET", "test-secret-key");
 
     const session = createTestUserSession();
-    const { jwt } = await import('../../../functions/_shared/deps.ts');
+    const getUserStub = stub(deps, "getUserFromRequest", () =>
+      Promise.resolve(session)
+    );
+
+    const { jwt } = await import("../../../functions/_shared/deps.ts");
     const token = jwt.sign(
       {
         installationId: session.installationId,
@@ -571,60 +592,61 @@ Deno.test('handleStatus - successful status retrieval', async () => {
         userId: session.userId,
         avatarUrl: session.avatarUrl,
       },
-      'test-secret-key',
-      { algorithm: 'HS256', expiresIn: '24h' },
+      "test-secret-key",
+      { algorithm: "HS256", expiresIn: "24h" }
     );
 
     const mockStatusService = createMockWorkflowStatusService({
       getWorkflowStatus: async () =>
         await Promise.resolve({
-          fileName: 'test-workflow.json',
-          status: 'success' as const,
+          fileName: "test-workflow.json",
+          status: "success" as const,
           workflowRunId: 12345,
-          workflowRunUrl: 'https://github.com/test/workflows/runs/12345',
+          workflowRunUrl: "https://github.com/test/workflows/runs/12345",
           errorMessage: null,
-          triggeredAt: '2024-01-01T00:00:00Z',
-          completedAt: '2024-01-01T00:05:00Z',
+          triggeredAt: "2024-01-01T00:00:00Z",
+          completedAt: "2024-01-01T00:05:00Z",
         }),
     });
 
     // Stub the service constructor
     const statusServiceStub = stub(
       deps,
-      'WorkflowStatusService',
-      () => mockStatusService,
+      "WorkflowStatusService",
+      () => mockStatusService
     );
 
     const githubClientStub = stub(
       deps,
-      'GitHubClientService',
-      () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>),
+      "GitHubClientService",
+      () => ({} as unknown as InstanceType<typeof deps.GitHubClientService>)
     );
 
     try {
       const req = createMockRequest({
-        method: 'GET',
-        url: 'https://example.com/workflows/status/test-workflow.json',
+        method: "GET",
+        url: "https://example.com/workflows/status/test-workflow.json",
         headers: {
           cookie: `faasr_session=${encodeURIComponent(token)}`,
         },
       });
 
-      const response = await handleStatus(req, 'test-workflow.json');
+      const response = await handleStatus(req, "test-workflow.json");
 
       assertEquals(response.status, 200);
       const body = await response.json();
-      assertEquals(body.fileName, 'test-workflow.json');
-      assertEquals(body.status, 'success');
+      assertEquals(body.fileName, "test-workflow.json");
+      assertEquals(body.status, "success");
       assertEquals(body.workflowRunId, 12345);
       assertEquals(
         body.workflowRunUrl,
-        'https://github.com/test/workflows/runs/12345',
+        "https://github.com/test/workflows/runs/12345"
       );
       assertEquals(body.errorMessage, null);
-      assertEquals(body.triggeredAt, '2024-01-01T00:00:00Z');
-      assertEquals(body.completedAt, '2024-01-01T00:05:00Z');
+      assertEquals(body.triggeredAt, "2024-01-01T00:00:00Z");
+      assertEquals(body.completedAt, "2024-01-01T00:05:00Z");
     } finally {
+      getUserStub.restore();
       statusServiceStub.restore();
       githubClientStub.restore();
     }
