@@ -239,4 +239,163 @@ describe("useAuth", () => {
       expect(result.current.error).toBe("Logout failed");
     });
   });
+
+  it("updates session when onAuthStateChange is triggered", async () => {
+    let authStateChangeCallback: (event: string, session: any) => void;
+
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+
+    (supabase.auth.onAuthStateChange as jest.Mock).mockImplementation(
+      (callback) => {
+        authStateChangeCallback = callback;
+        return {
+          data: { subscription: { unsubscribe: jest.fn() } },
+        };
+      }
+    );
+
+    const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Trigger auth state change with a new session
+    const newSession = {
+      access_token: "new-token",
+      refresh_token: "new-refresh-token",
+      user: {
+        id: "test-id",
+        email: "github-123@faasr.app",
+        user_metadata: {
+          installationId: "123456",
+          githubLogin: "testuser",
+          githubId: 123,
+        },
+        created_at: new Date().toISOString(),
+      },
+    };
+
+    authStateChangeCallback!("SIGNED_IN", newSession);
+
+    await waitFor(() => {
+      expect(result.current.session).not.toBe(null);
+      expect(result.current.session?.access_token).toBe("new-token");
+      expect(result.current.isAuthenticated).toBe(true);
+    });
+  });
+
+  it("clears error when onAuthStateChange is triggered", async () => {
+    let authStateChangeCallback: (event: string, session: any) => void;
+
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: { session: null },
+      error: new Error("Initial error"),
+    });
+
+    (supabase.auth.onAuthStateChange as jest.Mock).mockImplementation(
+      (callback) => {
+        authStateChangeCallback = callback;
+        return {
+          data: { subscription: { unsubscribe: jest.fn() } },
+        };
+      }
+    );
+
+    const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => {
+      expect(result.current.error).toBe("Initial error");
+    });
+
+    // Trigger auth state change - should clear error
+    authStateChangeCallback!("SIGNED_IN", null);
+
+    await waitFor(() => {
+      expect(result.current.error).toBe(null);
+    });
+  });
+
+  it("handles refreshSession error with non-Error types", async () => {
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: {
+            id: "test-id",
+            email: "github-123@faasr.app",
+            user_metadata: {
+              installationId: "123456",
+              githubLogin: "testuser",
+              githubId: 123,
+            },
+            created_at: new Date().toISOString(),
+          },
+        },
+      },
+      error: null,
+    });
+
+    // Test with string error
+    (supabase.auth.refreshSession as jest.Mock).mockRejectedValue(
+      "String error"
+    );
+
+    const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await result.current.refreshSession();
+
+    await waitFor(() => {
+      expect(result.current.error).toBe("Failed to refresh session");
+      expect(result.current.session).toBe(null);
+    });
+  });
+
+  it("handles refreshSession error with object error", async () => {
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: {
+            id: "test-id",
+            email: "github-123@faasr.app",
+            user_metadata: {
+              installationId: "123456",
+              githubLogin: "testuser",
+              githubId: 123,
+            },
+            created_at: new Date().toISOString(),
+          },
+        },
+      },
+      error: null,
+    });
+
+    // Test with object error
+    (supabase.auth.refreshSession as jest.Mock).mockRejectedValue({
+      message: "Object error",
+    });
+
+    const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await result.current.refreshSession();
+
+    await waitFor(() => {
+      expect(result.current.error).toBe("Failed to refresh session");
+      expect(result.current.session).toBe(null);
+    });
+  });
 });

@@ -3,6 +3,7 @@
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createRoutesStub } from "react-router";
 import { InstallPage } from "../../../src/pages/InstallPage";
 import { authApi } from "../../../src/services/api";
@@ -157,6 +158,125 @@ describe("InstallPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/installation error/i)).toBeInTheDocument();
+    });
+
+    (window as any).location = originalURL;
+  });
+
+  it("redirects to upload page after successful installation with delay", async () => {
+    jest.useFakeTimers();
+
+    (authApi.callback as jest.Mock).mockResolvedValue({
+      success: true,
+      message: "Installation successful",
+      session: {
+        access_token: "test-token",
+        refresh_token: "test-refresh-token",
+      },
+      user: {
+        login: "testuser",
+        id: 1,
+        avatarUrl: "https://example.com/avatar.png",
+      },
+      fork: {
+        owner: "testuser",
+        repoName: "FaaSr-workflow",
+        url: "https://github.com/testuser/FaaSr-workflow",
+        status: "created",
+      },
+    });
+
+    const originalURL = window.location;
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalURL,
+      search: "?installation_id=12345",
+    };
+
+    const UploadPage = () => <div data-testid="upload-page">Upload Page</div>;
+
+    const Stub = createRoutesStub([
+      {
+        path: "/install",
+        Component: InstallPage,
+      },
+      {
+        path: "/upload",
+        Component: UploadPage,
+      },
+    ]);
+
+    render(<Stub initialEntries={["/install"]} />);
+
+    // Wait for success message
+    await waitFor(() => {
+      expect(screen.getByText(/installation successful/i)).toBeInTheDocument();
+    });
+
+    // Verify refreshSession was called
+    expect(mockRefreshSession).toHaveBeenCalled();
+
+    // Fast-forward time by 2 seconds
+    jest.advanceTimersByTime(2000);
+
+    // Wait for navigation to upload page
+    await waitFor(() => {
+      expect(screen.getByTestId("upload-page")).toBeInTheDocument();
+    });
+
+    jest.useRealTimers();
+    (window as any).location = originalURL;
+  });
+
+  it("navigates to home when Return to Home button is clicked", async () => {
+    (authApi.callback as jest.Mock).mockRejectedValue(
+      new Error("Installation failed")
+    );
+
+    const originalURL = window.location;
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalURL,
+      search: "?installation_id=12345",
+    };
+
+    const HomePage = () => <div data-testid="home-page">Home Page</div>;
+
+    const Stub = createRoutesStub([
+      {
+        path: "/install",
+        Component: InstallPage,
+      },
+      {
+        path: "/",
+        Component: HomePage,
+      },
+    ]);
+
+    render(<Stub initialEntries={["/install"]} />);
+
+    // Wait for error message and button to appear
+    await waitFor(() => {
+      expect(screen.getByText(/installation error/i)).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      const returnButton = screen.getByRole("button", {
+        name: /return to home/i,
+      });
+      expect(returnButton).toBeInTheDocument();
+    });
+
+    const returnButton = screen.getByRole("button", {
+      name: /return to home/i,
+    });
+
+    const user = userEvent.setup();
+    await user.click(returnButton);
+
+    // Wait for navigation to home page
+    await waitFor(() => {
+      expect(screen.getByTestId("home-page")).toBeInTheDocument();
     });
 
     (window as any).location = originalURL;

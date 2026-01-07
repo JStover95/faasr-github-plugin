@@ -431,7 +431,7 @@ describe("handleResponse error handling", () => {
     });
   });
 
-  it("handles JSON parse errors gracefully", async () => {
+  it("handles JSON parse errors gracefully in error response", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
       status: 500,
@@ -446,5 +446,101 @@ describe("handleResponse error handling", () => {
     await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
       "Server error. Please try again in a few minutes."
     );
+  });
+
+  it("handles JSON parse errors in success response", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => {
+        throw new Error("Invalid JSON");
+      },
+    } as unknown as Response);
+
+    // When JSON parsing fails in success path, should return generic error
+    await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
+      "Invalid response from server. Please try again or contact support."
+    );
+  });
+
+  describe("formatApiErrorMessage status codes", () => {
+    it("returns correct message for status 400", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        json: async () => ({ success: false, error: undefined }),
+      } as Response);
+
+      await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
+        "Invalid request. Please check your input and try again."
+      );
+    });
+
+    it("returns correct message for status 401", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        json: async () => ({ success: false, error: undefined }),
+      } as Response);
+
+      await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
+        "Authentication required. Please log in and try again."
+      );
+    });
+
+    it("returns correct message for status 403", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+        json: async () => ({ success: false, error: undefined }),
+      } as Response);
+
+      await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
+        "Permission denied. Please check your GitHub App permissions."
+      );
+    });
+
+    it("returns correct message for status 404", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+        json: async () => ({ success: false, error: undefined }),
+      } as Response);
+
+      await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
+        "Resource not found. Please verify the file or workflow exists."
+      );
+    });
+
+    it("returns correct message for status 429", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 429,
+        statusText: "Too Many Requests",
+        json: async () => ({ success: false, error: undefined }),
+      } as Response);
+
+      await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
+        "Too many requests. Please wait a few minutes and try again."
+      );
+    });
+
+    it("returns correct message for default status codes", async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 418,
+        statusText: "I'm a teapot",
+        json: async () => ({ success: false, error: undefined }),
+      } as Response);
+
+      await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
+        "Request failed (418). Please try again."
+      );
+    });
   });
 });

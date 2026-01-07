@@ -3,13 +3,21 @@
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createRoutesStub } from "react-router";
 import { HomePage } from "../../../src/pages/HomePage";
 import { useAuth } from "../../../src/hooks/useAuth";
+import { authApi } from "../../../src/services/api";
 
 // Mock dependencies
 jest.mock("../../../src/hooks/useAuth", () => ({
   useAuth: jest.fn(),
+}));
+
+jest.mock("../../../src/services/api", () => ({
+  authApi: {
+    install: jest.fn(),
+  },
 }));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
@@ -157,7 +165,7 @@ describe("HomePage", () => {
     expect(screen.getByText("Welcome to FaaSr")).toBeInTheDocument();
   });
 
-  it("handles install error by logging to console", () => {
+  it("calls handleInstallError and logs to console when install fails", async () => {
     const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
     mockUseAuth.mockReturnValue({
@@ -169,13 +177,25 @@ describe("HomePage", () => {
       logout: jest.fn(),
     });
 
+    const installError = new Error("Installation failed");
+    (authApi.install as jest.Mock).mockRejectedValue(installError);
+
     renderWithRouter();
 
-    // The InstallButton will handle the error, but we can verify the error handler is set up
     const installButton = screen.getByRole("button", {
       name: /install faasr/i,
     });
-    expect(installButton).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(installButton);
+
+    // Wait for the error handler to be called
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Installation error:",
+        expect.any(Error)
+      );
+    });
 
     consoleErrorSpy.mockRestore();
   });
