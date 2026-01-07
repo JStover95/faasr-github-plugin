@@ -3,6 +3,17 @@
  */
 
 import { authApi, workflowsApi, healthApi } from "../../../src/services/api";
+import { supabase } from "../../../src/services/supabase";
+
+// Mock Supabase
+jest.mock("../../../src/services/supabase", () => ({
+  supabase: {
+    auth: {
+      getSession: jest.fn(),
+      setSession: jest.fn(),
+    },
+  },
+}));
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -75,10 +86,21 @@ describe("authApi", () => {
   });
 
   describe("callback", () => {
+    beforeEach(() => {
+      (supabase.auth.setSession as jest.Mock).mockResolvedValue({
+        data: { session: null, user: null },
+        error: null,
+      });
+    });
+
     it("calls callback endpoint with installation_id", async () => {
       const mockResponse = {
         success: true,
         message: "Installation successful",
+        session: {
+          access_token: "test-access-token",
+          refresh_token: "test-refresh-token",
+        },
         user: {
           login: "testuser",
           id: 1,
@@ -106,12 +128,21 @@ describe("authApi", () => {
         })
       );
       expect(result).toEqual(mockResponse);
+      // Verify session was stored
+      expect(supabase.auth.setSession).toHaveBeenCalledWith({
+        access_token: "test-access-token",
+        refresh_token: "test-refresh-token",
+      });
     });
 
     it("includes setup_action when provided", async () => {
       const mockResponse = {
         success: true,
         message: "Installation successful",
+        session: {
+          access_token: "test-access-token",
+          refresh_token: "test-refresh-token",
+        },
         user: {
           login: "testuser",
           id: 1,
@@ -156,105 +187,22 @@ describe("authApi", () => {
       );
     });
   });
-
-  describe("getSession", () => {
-    it("returns session data when authenticated", async () => {
-      const mockResponse = {
-        authenticated: true,
-        user: {
-          login: "testuser",
-          id: 1,
-          avatarUrl: "https://example.com/avatar.png",
-        },
-        fork: {
-          owner: "testuser",
-          repoName: "FaaSr-workflow",
-          url: "https://github.com/testuser/FaaSr-workflow",
-          status: "created",
-        },
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse,
-      } as Response);
-
-      const result = await authApi.getSession();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("/auth/session"),
-        expect.objectContaining({
-          method: "GET",
-        })
-      );
-      expect(result).toEqual(mockResponse);
-    });
-
-    it("returns unauthenticated session", async () => {
-      const mockResponse = {
-        authenticated: false,
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse,
-      } as Response);
-
-      const result = await authApi.getSession();
-      expect(result).toEqual(mockResponse);
-    });
-
-    it("throws error when response is not ok", async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-        json: async () => ({ success: false, error: "Server error" }),
-      } as Response);
-
-      await expect(authApi.getSession()).rejects.toThrow();
-    });
-  });
-
-  describe("logout", () => {
-    it("calls logout endpoint successfully", async () => {
-      const mockResponse = {
-        success: true,
-        message: "Logged out successfully",
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse,
-      } as Response);
-
-      const result = await authApi.logout();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("/auth/logout"),
-        expect.objectContaining({
-          method: "POST",
-        })
-      );
-      expect(result).toEqual(mockResponse);
-    });
-
-    it("throws error when response is not ok", async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-        json: async () => ({ success: false, error: "Server error" }),
-      } as Response);
-
-      await expect(authApi.logout()).rejects.toThrow();
-    });
-  });
 });
 
 describe("workflowsApi", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock Supabase session for authenticated requests
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: null,
+        },
+      },
+      error: null,
+    });
   });
 
   describe("upload", () => {
@@ -280,7 +228,9 @@ describe("workflowsApi", () => {
         expect.stringContaining("/workflows/upload"),
         expect.objectContaining({
           method: "POST",
-          credentials: "include",
+          headers: expect.objectContaining({
+            Authorization: "Bearer test-token",
+          }),
         })
       );
       expect(result).toEqual(mockResponse);
@@ -325,6 +275,9 @@ describe("workflowsApi", () => {
         expect.stringContaining("/workflows/status/test.json"),
         expect.objectContaining({
           method: "GET",
+          headers: expect.objectContaining({
+            Authorization: "Bearer test-token",
+          }),
         })
       );
       expect(result).toEqual(mockResponse);
@@ -465,6 +418,17 @@ describe("healthApi", () => {
 describe("handleResponse error handling", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock Supabase session for authenticated requests
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: null,
+        },
+      },
+      error: null,
+    });
   });
 
   it("handles JSON parse errors gracefully", async () => {
@@ -478,7 +442,8 @@ describe("handleResponse error handling", () => {
     } as unknown as Response);
 
     // When JSON parsing fails, should return user-friendly error message based on status code
-    await expect(authApi.getSession()).rejects.toThrow(
+    // Test with workflowsApi.getStatus since authApi.getSession no longer exists
+    await expect(workflowsApi.getStatus("test.json")).rejects.toThrow(
       "Server error. Please try again in a few minutes."
     );
   });
