@@ -2,7 +2,7 @@
  * Tests for InstallPage component
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRoutesStub } from "react-router";
 import { InstallPage } from "../../../src/pages/InstallPage";
@@ -55,6 +55,7 @@ describe("InstallPage", () => {
     });
 
     (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
+    (mockRefreshSession as jest.Mock).mockResolvedValue(undefined);
 
     // Mock URLSearchParams
     const originalURL = window.location;
@@ -73,21 +74,25 @@ describe("InstallPage", () => {
       expect(elements.length).toBeGreaterThan(0);
     });
 
-    // Now resolve the promise to clean up
-    resolveCallback!({
-      success: true,
-      message: "Installation successful",
-      user: {
-        login: "testuser",
-        id: 1,
-        avatarUrl: "https://example.com/avatar.png",
-      },
-      fork: {
-        owner: "testuser",
-        repoName: "FaaSr-workflow",
-        url: "https://github.com/testuser/FaaSr-workflow",
-        status: "created",
-      },
+    // Now resolve the promise within act() to clean up and handle state updates
+    await act(async () => {
+      resolveCallback!({
+        success: true,
+        message: "Installation successful",
+        user: {
+          login: "testuser",
+          id: 1,
+          avatarUrl: "https://example.com/avatar.png",
+        },
+        fork: {
+          owner: "testuser",
+          repoName: "FaaSr-workflow",
+          url: "https://github.com/testuser/FaaSr-workflow",
+          status: "created",
+        },
+      });
+      // Wait for the promise to resolve
+      await callbackPromise;
     });
 
     (window as any).location = originalURL;
@@ -111,21 +116,13 @@ describe("InstallPage", () => {
   });
 
   it("displays success message when installation succeeds", async () => {
-    (authApi.callback as jest.Mock).mockResolvedValue({
-      success: true,
-      message: "Installation successful",
-      user: {
-        login: "testuser",
-        id: 1,
-        avatarUrl: "https://example.com/avatar.png",
-      },
-      fork: {
-        owner: "testuser",
-        repoName: "FaaSr-workflow",
-        url: "https://github.com/testuser/FaaSr-workflow",
-        status: "created",
-      },
+    let resolveCallback: (value: any) => void;
+    const callbackPromise = new Promise((resolve) => {
+      resolveCallback = resolve;
     });
+
+    (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
+    (mockRefreshSession as jest.Mock).mockResolvedValue(undefined);
 
     const originalURL = window.location;
     delete (window as any).location;
@@ -135,6 +132,27 @@ describe("InstallPage", () => {
     };
 
     renderWithRouter();
+
+    // Resolve the promise within act() to handle state updates
+    await act(async () => {
+      resolveCallback!({
+        success: true,
+        message: "Installation successful",
+        user: {
+          login: "testuser",
+          id: 1,
+          avatarUrl: "https://example.com/avatar.png",
+        },
+        fork: {
+          owner: "testuser",
+          repoName: "FaaSr-workflow",
+          url: "https://github.com/testuser/FaaSr-workflow",
+          status: "created",
+        },
+      });
+      // Wait for the promise to resolve
+      await callbackPromise;
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/installation successful/i)).toBeInTheDocument();
@@ -144,8 +162,13 @@ describe("InstallPage", () => {
   });
 
   it("displays error message when installation fails", async () => {
+    let rejectCallback: (error: any) => void;
+    const callbackPromise = new Promise((_, reject) => {
+      rejectCallback = reject;
+    });
+
     const error = new Error("Installation failed");
-    (authApi.callback as jest.Mock).mockRejectedValue(error);
+    (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
 
     const originalURL = window.location;
     delete (window as any).location;
@@ -155,6 +178,13 @@ describe("InstallPage", () => {
     };
 
     renderWithRouter();
+
+    // Reject the promise within act() to handle state updates
+    await act(async () => {
+      rejectCallback!(error);
+      // Wait for the promise to settle
+      await callbackPromise.catch(() => {});
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/installation error/i)).toBeInTheDocument();
@@ -166,25 +196,13 @@ describe("InstallPage", () => {
   it("redirects to upload page after successful installation with delay", async () => {
     jest.useFakeTimers();
 
-    (authApi.callback as jest.Mock).mockResolvedValue({
-      success: true,
-      message: "Installation successful",
-      session: {
-        access_token: "test-token",
-        refresh_token: "test-refresh-token",
-      },
-      user: {
-        login: "testuser",
-        id: 1,
-        avatarUrl: "https://example.com/avatar.png",
-      },
-      fork: {
-        owner: "testuser",
-        repoName: "FaaSr-workflow",
-        url: "https://github.com/testuser/FaaSr-workflow",
-        status: "created",
-      },
+    let resolveCallback: (value: any) => void;
+    const callbackPromise = new Promise((resolve) => {
+      resolveCallback = resolve;
     });
+
+    (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
+    (mockRefreshSession as jest.Mock).mockResolvedValue(undefined);
 
     const originalURL = window.location;
     delete (window as any).location;
@@ -208,6 +226,31 @@ describe("InstallPage", () => {
 
     render(<Stub initialEntries={["/install"]} />);
 
+    // Resolve the promise within act() to handle state updates
+    await act(async () => {
+      resolveCallback!({
+        success: true,
+        message: "Installation successful",
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+        },
+        user: {
+          login: "testuser",
+          id: 1,
+          avatarUrl: "https://example.com/avatar.png",
+        },
+        fork: {
+          owner: "testuser",
+          repoName: "FaaSr-workflow",
+          url: "https://github.com/testuser/FaaSr-workflow",
+          status: "created",
+        },
+      });
+      // Wait for the promise to resolve
+      await callbackPromise;
+    });
+
     // Wait for success message
     await waitFor(() => {
       expect(screen.getByText(/installation successful/i)).toBeInTheDocument();
@@ -216,8 +259,10 @@ describe("InstallPage", () => {
     // Verify refreshSession was called
     expect(mockRefreshSession).toHaveBeenCalled();
 
-    // Fast-forward time by 2 seconds
-    jest.advanceTimersByTime(2000);
+    // Fast-forward time by 2 seconds - wrap in act() to handle state updates
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
 
     // Wait for navigation to upload page
     await waitFor(() => {
@@ -229,9 +274,13 @@ describe("InstallPage", () => {
   });
 
   it("navigates to home when Return to Home button is clicked", async () => {
-    (authApi.callback as jest.Mock).mockRejectedValue(
-      new Error("Installation failed")
-    );
+    let rejectCallback: (error: any) => void;
+    const callbackPromise = new Promise((_, reject) => {
+      rejectCallback = reject;
+    });
+
+    const error = new Error("Installation failed");
+    (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
 
     const originalURL = window.location;
     delete (window as any).location;
@@ -254,6 +303,13 @@ describe("InstallPage", () => {
     ]);
 
     render(<Stub initialEntries={["/install"]} />);
+
+    // Reject the promise within act() to handle state updates
+    await act(async () => {
+      rejectCallback!(error);
+      // Wait for the promise to settle
+      await callbackPromise.catch(() => {});
+    });
 
     // Wait for error message and button to appear
     await waitFor(() => {

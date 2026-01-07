@@ -2,7 +2,7 @@
  * Tests for useAuth hook
  */
 
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor, act } from "@testing-library/react";
 import { useAuth } from "../../../src/hooks/useAuth";
 import { supabase } from "../../../src/services/supabase";
 
@@ -151,7 +151,9 @@ describe("useAuth", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    await result.current.refreshSession();
+    await act(async () => {
+      await result.current.refreshSession();
+    });
 
     await waitFor(() => {
       expect(result.current.session?.user.user_metadata.githubLogin).toBe(
@@ -191,7 +193,9 @@ describe("useAuth", () => {
       expect(result.current.isAuthenticated).toBe(true);
     });
 
-    await result.current.logout();
+    await act(async () => {
+      await result.current.logout();
+    });
 
     expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
 
@@ -233,7 +237,9 @@ describe("useAuth", () => {
       expect(result.current.isAuthenticated).toBe(true);
     });
 
-    await result.current.logout();
+    await act(async () => {
+      await result.current.logout();
+    });
 
     await waitFor(() => {
       expect(result.current.error).toBe("Logout failed");
@@ -279,7 +285,9 @@ describe("useAuth", () => {
       },
     };
 
-    authStateChangeCallback!("SIGNED_IN", newSession);
+    act(() => {
+      authStateChangeCallback!("SIGNED_IN", newSession);
+    });
 
     await waitFor(() => {
       expect(result.current.session).not.toBe(null);
@@ -312,7 +320,9 @@ describe("useAuth", () => {
     });
 
     // Trigger auth state change - should clear error
-    authStateChangeCallback!("SIGNED_IN", null);
+    act(() => {
+      authStateChangeCallback!("SIGNED_IN", null);
+    });
 
     await waitFor(() => {
       expect(result.current.error).toBe(null);
@@ -351,7 +361,9 @@ describe("useAuth", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    await result.current.refreshSession();
+    await act(async () => {
+      await result.current.refreshSession();
+    });
 
     await waitFor(() => {
       expect(result.current.error).toBe("Failed to refresh session");
@@ -391,7 +403,9 @@ describe("useAuth", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    await result.current.refreshSession();
+    await act(async () => {
+      await result.current.refreshSession();
+    });
 
     await waitFor(() => {
       expect(result.current.error).toBe("Failed to refresh session");

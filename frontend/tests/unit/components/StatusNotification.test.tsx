@@ -2,7 +2,7 @@
  * Tests for StatusNotification component
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StatusNotification } from "../../../src/components/StatusNotification";
 import { StatusNotificationIds } from "../../../src/components/StatusNotification.ids";
@@ -119,7 +119,9 @@ describe("StatusNotification", () => {
       screen.getByTestId(StatusNotificationIds.notification)
     ).toBeInTheDocument();
 
-    jest.advanceTimersByTime(1000);
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
 
     await waitFor(() => {
       expect(onDismiss).toHaveBeenCalledTimes(1);
