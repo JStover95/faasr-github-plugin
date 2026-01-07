@@ -90,6 +90,10 @@ export interface WorkflowRegistration {
 export interface InstallationResponse {
   success: boolean;
   message: string;
+  session?: {
+    access_token: string;
+    refresh_token: string;
+  };
   user: UserInfo;
   fork: ForkInfo;
 }
