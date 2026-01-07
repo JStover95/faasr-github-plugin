@@ -12,6 +12,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.90.0",
     "prettier": "^3.7.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
