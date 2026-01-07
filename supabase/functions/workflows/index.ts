@@ -7,7 +7,7 @@
  */
 
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { getSessionFromRequest } from "../_shared/auth.ts";
+import { getUserFromRequest } from "../_shared/supabase-auth.ts";
 import { GitHubClientService } from "../_shared/github-client.ts";
 import { WorkflowUploadService } from "../_shared/workflow-upload-service.ts";
 import { WorkflowStatusService } from "../_shared/workflow-status-service.ts";
@@ -51,7 +51,7 @@ export async function handleUpload(req: Request): Promise<Response> {
   const corsHeaders = getCorsHeaders(req);
   try {
     // Validate session
-    const session = getSessionFromRequest(req);
+    const session = await getUserFromRequest(req);
     if (!session) {
       return createAuthErrorResponse(req);
     }
@@ -127,7 +127,7 @@ export async function handleStatus(
   const corsHeaders = getCorsHeaders(req);
   try {
     // Validate session
-    const session = getSessionFromRequest(req);
+    const session = await getUserFromRequest(req);
     if (!session) {
       return createAuthErrorResponse(req);
     }

@@ -4,8 +4,8 @@
  * Handles GitHub App installation and session management:
  * - GET /auth/install - Redirects to GitHub App installation page
  * - GET /auth/callback - Handles installation callback, creates fork, establishes session
- * - GET /auth/session - Returns current session status
- * - POST /auth/logout - Logs out current session
+ *
+ * Session management is handled by Supabase Auth client on the frontend.
  */
 
 import { getCorsHeaders } from "../_shared/cors.ts";
@@ -14,16 +14,10 @@ import {
   getInstallation,
   getInstallationToken,
 } from "../_shared/github-app.ts";
-import {
-  createLogoutCookie,
-  createSessionCookie,
-  createSessionToken,
-  getSessionFromRequest,
-} from "../_shared/auth.ts";
+import { createOrUpdateSupabaseUser } from "../_shared/supabase-auth.ts";
 import { ensureForkExists } from "../_shared/repository.ts";
 import { validateEnvironmentOnStartup } from "../_shared/env-validation.ts";
 import { Octokit } from "../_shared/deps.ts";
-import type { UserSession } from "../_shared/types.ts";
 
 /**
  * Services object for dependency injection and testing
@@ -34,8 +28,7 @@ export const deps = {
   checkInstallationPermissions,
   getInstallationToken,
   ensureForkExists,
-  createSessionToken,
-  createSessionCookie,
+  createOrUpdateSupabaseUser,
 };
 
 /**
@@ -153,25 +146,23 @@ export async function handleCallback(req: Request): Promise<Response> {
       installation.account.login
     );
 
-    // Create session
-    const sessionData: Omit<
-      UserSession,
-      "jwtToken" | "createdAt" | "expiresAt"
-    > = {
+    // Create or update Supabase user and generate session
+    const { session } = await deps.createOrUpdateSupabaseUser(
       installationId,
-      userLogin: installation.account.login,
-      userId: installation.account.id,
-      avatarUrl: installation.account.avatar_url,
-    };
+      installation.account.login,
+      installation.account.id,
+      installation.account.avatar_url
+    );
 
-    const sessionToken = deps.createSessionToken(sessionData);
-    const cookie = deps.createSessionCookie(sessionToken);
-
-    // Return success response with session cookie
+    // Return success response with session tokens
     return new Response(
       JSON.stringify({
         success: true,
         message: "Installation successful",
+        session: {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        },
         user: {
           login: installation.account.login,
           id: installation.account.id,
@@ -189,7 +180,6 @@ export async function handleCallback(req: Request): Promise<Response> {
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
-          "Set-Cookie": cookie,
         },
       }
     );
@@ -225,64 +215,6 @@ export async function handleCallback(req: Request): Promise<Response> {
 }
 
 /**
- * Handle GET /auth/session - Get current session status
- */
-export function handleGetSession(req: Request): Response {
-  const corsHeaders = getCorsHeaders(req);
-  const session = getSessionFromRequest(req);
-
-  if (!session) {
-    return new Response(
-      JSON.stringify({
-        authenticated: false,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  }
-
-  return new Response(
-    JSON.stringify({
-      authenticated: true,
-      user: {
-        login: session.userLogin,
-        id: session.userId,
-        avatarUrl: session.avatarUrl,
-      },
-    }),
-    {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
-  );
-}
-
-/**
- * Handle POST /auth/logout - Log out current session
- */
-export function handleLogout(req: Request): Response {
-  const corsHeaders = getCorsHeaders(req);
-  const logoutCookie = createLogoutCookie();
-
-  return new Response(
-    JSON.stringify({
-      success: true,
-      message: "Logged out successfully",
-    }),
-    {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-        "Set-Cookie": logoutCookie,
-      },
-    }
-  );
-}
-
-/**
  * Main Edge Function handler
  */
 if (import.meta.main) {
@@ -313,10 +245,6 @@ if (import.meta.main) {
         return handleInstall(req);
       } else if (path === "/auth/callback" && req.method === "GET") {
         return await handleCallback(req);
-      } else if (path === "/auth/session" && req.method === "GET") {
-        return handleGetSession(req);
-      } else if (path === "/auth/logout" && req.method === "POST") {
-        return handleLogout(req);
       } else {
         return new Response(
           JSON.stringify({

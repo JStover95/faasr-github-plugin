@@ -29,11 +29,20 @@ const REQUIRED_ENV_VARS = {
     description: 'GitHub App Private Key (PEM format)',
     required: true,
   },
-  JWT_SECRET: {
-    name: 'JWT_SECRET',
-    description: 'Secret for JWT token signing (minimum 32 characters)',
+  SUPABASE_URL: {
+    name: 'SUPABASE_URL',
+    description: 'Supabase project URL',
     required: true,
-    minLength: 32,
+  },
+  SUPABASE_ANON_KEY: {
+    name: 'SUPABASE_ANON_KEY',
+    description: 'Supabase anonymous key for client operations',
+    required: true,
+  },
+  SUPABASE_SERVICE_ROLE_KEY: {
+    name: 'SUPABASE_SERVICE_ROLE_KEY',
+    description: 'Supabase service role key for admin operations',
+    required: true,
   },
 } as const;
 
@@ -67,14 +76,6 @@ export function validateEnvironmentVariables(): ValidationResult {
       }
     } else {
       // Validate specific requirements
-      if (config.name === 'JWT_SECRET' && config.minLength) {
-        if (value.length < config.minLength) {
-          errors.push(
-            `${config.name} must be at least ${config.minLength} characters long (currently ${value.length})`,
-          );
-        }
-      }
-
       if (config.name === 'GITHUB_PRIVATE_KEY') {
         // Basic validation for PEM format
         if (!value.includes('BEGIN') || !value.includes('PRIVATE KEY')) {
