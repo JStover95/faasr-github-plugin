@@ -1,4 +1,5 @@
 {
+  "nodeModulesDir": "auto",
   "tasks": {
     "test": "deno test --allow-all",
     "test:coverage": "deno test --allow-all --coverage=coverage",
