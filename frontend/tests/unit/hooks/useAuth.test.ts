@@ -4,40 +4,71 @@
 
 import { renderHook, waitFor } from "@testing-library/react";
 import { useAuth } from "../../../src/hooks/useAuth";
-import { authApi } from "../../../src/services/api";
+import { supabase } from "../../../src/services/supabase";
 
-// Mock the API
-jest.mock("../../../src/services/api", () => ({
-  authApi: {
-    getSession: jest.fn(),
-    logout: jest.fn(),
+// Mock Supabase
+jest.mock("../../../src/services/supabase", () => ({
+  supabase: {
+    auth: {
+      getSession: jest.fn(),
+      setSession: jest.fn(),
+      refreshSession: jest.fn(),
+      signOut: jest.fn(),
+      onAuthStateChange: jest.fn(() => ({
+        data: { subscription: { unsubscribe: jest.fn() } },
+      })),
+    },
   },
 }));
 
 describe("useAuth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+    (supabase.auth.onAuthStateChange as jest.Mock).mockReturnValue({
+      data: { subscription: { unsubscribe: jest.fn() } },
+    });
   });
 
-  it("returns unauthenticated state initially", () => {
-    (authApi.getSession as jest.Mock).mockResolvedValue({
-      authenticated: false,
+  it("returns unauthenticated state initially", async () => {
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: { session: null },
+      error: null,
     });
 
     const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.session).toBe(null);
   });
 
-  it("loads session on mount", async () => {
-    (authApi.getSession as jest.Mock).mockResolvedValue({
-      authenticated: true,
-      user: {
-        login: "testuser",
-        id: 123,
-        avatarUrl: "https://example.com/avatar.png",
+  it("loads session from Supabase on mount", async () => {
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: {
+            id: "test-id",
+            email: "github-123@faasr.app",
+            user_metadata: {
+              installationId: "123456",
+              githubLogin: "testuser",
+              githubId: 123,
+              avatarUrl: "https://example.com/avatar.png",
+            },
+            created_at: new Date().toISOString(),
+          },
+        },
       },
+      error: null,
     });
 
     const { result } = renderHook(() => useAuth());
@@ -48,12 +79,20 @@ describe("useAuth", () => {
 
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.session).not.toBe(null);
-    expect(result.current.session?.userLogin).toBe("testuser");
+    expect(result.current.session?.user.user_metadata.githubLogin).toBe(
+      "testuser"
+    );
+    expect(result.current.session?.user.user_metadata.installationId).toBe(
+      "123456"
+    );
   });
 
   it("handles session loading error", async () => {
     const error = new Error("Failed to load session");
-    (authApi.getSession as jest.Mock).mockRejectedValue(error);
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: { session: null },
+      error,
+    });
 
     const { result } = renderHook(() => useAuth());
 
@@ -66,13 +105,44 @@ describe("useAuth", () => {
   });
 
   it("refreshes session when refreshSession is called", async () => {
-    (authApi.getSession as jest.Mock).mockResolvedValue({
-      authenticated: true,
-      user: {
-        login: "testuser",
-        id: 123,
-        avatarUrl: "https://example.com/avatar.png",
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: {
+            id: "test-id",
+            email: "github-123@faasr.app",
+            user_metadata: {
+              installationId: "123456",
+              githubLogin: "testuser",
+              githubId: 123,
+            },
+            created_at: new Date().toISOString(),
+          },
+        },
       },
+      error: null,
+    });
+
+    (supabase.auth.refreshSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "new-token",
+          refresh_token: "new-refresh-token",
+          user: {
+            id: "test-id",
+            email: "github-123@faasr.app",
+            user_metadata: {
+              installationId: "123456",
+              githubLogin: "updateduser",
+              githubId: 456,
+            },
+            created_at: new Date().toISOString(),
+          },
+        },
+      },
+      error: null,
     });
 
     const { result } = renderHook(() => useAuth());
@@ -81,36 +151,38 @@ describe("useAuth", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Update mock response
-    (authApi.getSession as jest.Mock).mockResolvedValue({
-      authenticated: true,
-      user: {
-        login: "updateduser",
-        id: 456,
-        avatarUrl: "https://example.com/avatar2.png",
-      },
-    });
-
     await result.current.refreshSession();
 
     await waitFor(() => {
-      expect(result.current.session?.userLogin).toBe("updateduser");
+      expect(result.current.session?.user.user_metadata.githubLogin).toBe(
+        "updateduser"
+      );
     });
   });
 
   it("logs out when logout is called", async () => {
-    (authApi.getSession as jest.Mock).mockResolvedValue({
-      authenticated: true,
-      user: {
-        login: "testuser",
-        id: 123,
-        avatarUrl: "https://example.com/avatar.png",
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: {
+            id: "test-id",
+            email: "github-123@faasr.app",
+            user_metadata: {
+              installationId: "123456",
+              githubLogin: "testuser",
+              githubId: 123,
+            },
+            created_at: new Date().toISOString(),
+          },
+        },
       },
+      error: null,
     });
 
-    (authApi.logout as jest.Mock).mockResolvedValue({
-      success: true,
-      message: "Logged out",
+    (supabase.auth.signOut as jest.Mock).mockResolvedValue({
+      error: null,
     });
 
     const { result } = renderHook(() => useAuth());
@@ -121,8 +193,8 @@ describe("useAuth", () => {
 
     await result.current.logout();
 
-    expect(authApi.logout).toHaveBeenCalledTimes(1);
-    
+    expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
+
     await waitFor(() => {
       expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.session).toBe(null);
@@ -130,17 +202,30 @@ describe("useAuth", () => {
   });
 
   it("handles logout error", async () => {
-    (authApi.getSession as jest.Mock).mockResolvedValue({
-      authenticated: true,
-      user: {
-        login: "testuser",
-        id: 123,
-        avatarUrl: "https://example.com/avatar.png",
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-token",
+          refresh_token: "test-refresh-token",
+          user: {
+            id: "test-id",
+            email: "github-123@faasr.app",
+            user_metadata: {
+              installationId: "123456",
+              githubLogin: "testuser",
+              githubId: 123,
+            },
+            created_at: new Date().toISOString(),
+          },
+        },
       },
+      error: null,
     });
 
     const error = new Error("Logout failed");
-    (authApi.logout as jest.Mock).mockRejectedValue(error);
+    (supabase.auth.signOut as jest.Mock).mockResolvedValue({
+      error,
+    });
 
     const { result } = renderHook(() => useAuth());
 
@@ -155,4 +240,3 @@ describe("useAuth", () => {
     });
   });
 });
-

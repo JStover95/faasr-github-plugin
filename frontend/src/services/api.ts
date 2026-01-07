@@ -9,24 +9,36 @@
 
 import type {
   InstallationResponse,
-  SessionResponse,
   UploadResponse,
   WorkflowStatusResponse,
-  SuccessResponse,
   ErrorResponse,
   HealthResponse,
 } from "../types";
 import { API_BASE_URL } from "../constants";
+import { supabase } from "./supabase";
 
 /**
- * Default fetch options with credentials for cookie handling
+ * Default fetch options (no credentials needed with Authorization header)
  */
 const defaultFetchOptions: RequestInit = {
-  credentials: "include", // Include cookies in requests
   headers: {
     "Content-Type": "application/json",
   },
 };
+
+/**
+ * Get Authorization header from Supabase session
+ *
+ * @returns Authorization header object or empty object if no session
+ */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token
+    ? { Authorization: `Bearer ${session.access_token}` }
+    : {};
+}
 
 /**
  * Format user-friendly error message from API response
@@ -44,20 +56,20 @@ function formatApiErrorMessage(status: number, errorMessage?: string): string {
   // Provide default messages based on status code
   switch (status) {
     case 400:
-      return 'Invalid request. Please check your input and try again.';
+      return "Invalid request. Please check your input and try again.";
     case 401:
-      return 'Authentication required. Please log in and try again.';
+      return "Authentication required. Please log in and try again.";
     case 403:
-      return 'Permission denied. Please check your GitHub App permissions.';
+      return "Permission denied. Please check your GitHub App permissions.";
     case 404:
-      return 'Resource not found. Please verify the file or workflow exists.';
+      return "Resource not found. Please verify the file or workflow exists.";
     case 429:
-      return 'Too many requests. Please wait a few minutes and try again.';
+      return "Too many requests. Please wait a few minutes and try again.";
     case 500:
     case 502:
     case 503:
     case 504:
-      return 'Server error. Please try again in a few minutes.';
+      return "Server error. Please try again in a few minutes.";
     default:
       return `Request failed (${status}). Please try again.`;
   }
@@ -76,10 +88,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     let errorMessage: string;
     try {
       const error: ErrorResponse = await response.json();
-      errorMessage = formatApiErrorMessage(
-        response.status,
-        error.error,
-      );
+      errorMessage = formatApiErrorMessage(response.status, error.error);
     } catch {
       // If JSON parsing fails, use status-based message
       errorMessage = formatApiErrorMessage(response.status);
@@ -95,7 +104,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return await response.json();
   } catch (error) {
     throw new Error(
-      'Invalid response from server. Please try again or contact support.',
+      "Invalid response from server. Please try again or contact support."
     );
   }
 }
@@ -110,8 +119,10 @@ export const authApi = {
    */
   async install(): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/auth/install`, {
-      ...defaultFetchOptions,
       method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
       redirect: "manual", // Don't follow redirect automatically
     });
 
@@ -131,6 +142,7 @@ export const authApi = {
   /**
    * Handle installation callback
    * Called after GitHub redirects back with installation info
+   * Stores session tokens in Supabase client
    */
   async callback(
     installationId: string,
@@ -146,36 +158,24 @@ export const authApi = {
     const response = await fetch(
       `${API_BASE_URL}/auth/callback?${params.toString()}`,
       {
-        ...defaultFetchOptions,
         method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       }
     );
 
-    return handleResponse<InstallationResponse>(response);
-  },
+    const result = await handleResponse<InstallationResponse>(response);
 
-  /**
-   * Get current session status
-   */
-  async getSession(): Promise<SessionResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/session`, {
-      ...defaultFetchOptions,
-      method: "GET",
-    });
+    // Store session in Supabase client if installation was successful
+    if (result.success && result.session) {
+      await supabase.auth.setSession({
+        access_token: result.session.access_token,
+        refresh_token: result.session.refresh_token,
+      });
+    }
 
-    return handleResponse<SessionResponse>(response);
-  },
-
-  /**
-   * Log out current session
-   */
-  async logout(): Promise<SuccessResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-      ...defaultFetchOptions,
-      method: "POST",
-    });
-
-    return handleResponse<SuccessResponse>(response);
+    return result;
   },
 };
 
@@ -190,9 +190,10 @@ export const workflowsApi = {
     const formData = new FormData();
     formData.append("file", file);
 
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/workflows/upload`, {
-      credentials: "include", // Include cookies in requests
       method: "POST",
+      headers: authHeaders,
       // Don't set Content-Type header for FormData - browser will set it with boundary
       body: formData,
     });
@@ -204,11 +205,15 @@ export const workflowsApi = {
    * Get workflow registration status
    */
   async getStatus(fileName: string): Promise<WorkflowStatusResponse> {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE_URL}/workflows/status/${encodeURIComponent(fileName)}`,
       {
-        ...defaultFetchOptions,
         method: "GET",
+        headers: {
+          ...defaultFetchOptions.headers,
+          ...authHeaders,
+        },
       }
     );
 

@@ -3,27 +3,10 @@
  *
  * These types match the backend types in supabase/functions/_shared/types.ts
  * and the API contract in specs/001-github-app-mvp/contracts/api.yaml
+ *
+ * Note: User authentication uses Supabase Auth's Session type directly.
+ * Access user metadata via session.user.user_metadata (e.g., installationId, githubLogin, githubId).
  */
-
-/**
- * User Session - Represents an authenticated GitHub user session
- */
-export interface UserSession {
-  /** GitHub App installation ID after user installs the app */
-  installationId: string;
-  /** GitHub username/login */
-  userLogin: string;
-  /** GitHub user ID */
-  userId: number;
-  /** User's GitHub avatar URL */
-  avatarUrl?: string;
-  /** JWT session token (stored in HTTP-only cookie) */
-  jwtToken: string;
-  /** Session creation time */
-  createdAt: Date;
-  /** Session expiration time */
-  expiresAt: Date;
-}
 
 /**
  * Repository Fork - Represents the user's fork of the FaaSr-workflow repository

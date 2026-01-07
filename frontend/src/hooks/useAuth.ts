@@ -2,16 +2,16 @@
  * useAuth hook - Authentication state management
  *
  * Provides authentication state, session handling, and auth operations
- * for the FaaSr GitHub App.
+ * for the FaaSr GitHub App using Supabase Auth.
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { authApi } from "../services/api";
-import type { UserSession, SessionResponse } from "../types";
+import { supabase } from "../services/supabase";
+import type { Session } from "@supabase/supabase-js";
 
 interface UseAuthReturn {
   /** Current user session */
-  session: UserSession | null;
+  session: Session | null;
   /** Whether user is authenticated */
   isAuthenticated: boolean;
   /** Whether session is being loaded */
@@ -27,42 +27,56 @@ interface UseAuthReturn {
 /**
  * useAuth hook
  *
- * Manages authentication state and provides methods for session management.
- * Automatically loads session on mount and provides reactive state updates.
+ * Manages authentication state using Supabase Auth.
+ * Automatically loads session on mount and listens for auth state changes.
  */
 export function useAuth(): UseAuthReturn {
-  const [session, setSession] = useState<UserSession | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Load session from server
-   */
-  const loadSession = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response: SessionResponse = await authApi.getSession();
-
-      if (response.authenticated && response.user) {
-        // Convert API response to UserSession format
-        const userSession: UserSession = {
-          installationId: "", // Will be set by backend in actual implementation
-          userLogin: response.user.login,
-          userId: response.user.id,
-          avatarUrl: response.user.avatarUrl,
-          jwtToken: "", // Token is stored in HTTP-only cookie
-          createdAt: new Date(),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-        };
-
-        setSession(userSession);
-      } else {
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        setError(error.message);
         setSession(null);
+      } else {
+        setSession(session);
       }
+      setIsLoading(false);
+    });
+
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setError(null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  /**
+   * Refresh session from Supabase
+   */
+  const refreshSession = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      setSession(session);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load session");
+      setError(
+        err instanceof Error ? err.message : "Failed to refresh session"
+      );
       setSession(null);
     } finally {
       setIsLoading(false);
@@ -70,29 +84,18 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   /**
-   * Refresh session from server
-   */
-  const refreshSession = useCallback(async () => {
-    await loadSession();
-  }, [loadSession]);
-
-  /**
    * Log out current session
    */
   const logout = useCallback(async () => {
     try {
-      await authApi.logout();
-      setSession(null);
       setError(null);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setSession(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to log out");
     }
   }, []);
-
-  // Load session on mount
-  useEffect(() => {
-    loadSession();
-  }, [loadSession]);
 
   return {
     session,
