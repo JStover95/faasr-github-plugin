@@ -4,48 +4,27 @@
 
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createRoutesStub } from "react-router";
-import { InstallPage } from "../../../src/pages/InstallPage";
+import { InstallPageStack } from "../../__mocks__/InstallPage.mock";
+import { defaultMockAuth } from "../../__mocks__/useAuth.mock";
 import { authApi } from "../../../src/services/api";
-import { useAuth } from "../../../src/hooks/useAuth";
 
 // Mock dependencies
+jest.mock("../../../src/hooks/useAuth", () => ({
+  useAuth: jest.fn(),
+}));
+
 jest.mock("../../../src/services/api", () => ({
   authApi: {
     callback: jest.fn(),
   },
 }));
 
-jest.mock("../../../src/hooks/useAuth", () => ({
-  useAuth: jest.fn(),
-}));
-
-const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-
 describe("InstallPage", () => {
-  const mockRefreshSession = jest.fn();
+  const mockRefreshSession = jest.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      refreshSession: mockRefreshSession,
-      logout: jest.fn(),
-    });
   });
-
-  const renderWithRouter = () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/install",
-        Component: InstallPage,
-      },
-    ]);
-    return render(<Stub initialEntries={["/install"]} />);
-  };
 
   it("displays installation processing message", async () => {
     // Create a promise that we can control
@@ -55,7 +34,11 @@ describe("InstallPage", () => {
     });
 
     (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
-    (mockRefreshSession as jest.Mock).mockResolvedValue(undefined);
+
+    const authValue = {
+      ...defaultMockAuth,
+      refreshSession: mockRefreshSession,
+    };
 
     // Mock URLSearchParams
     const originalURL = window.location;
@@ -65,7 +48,7 @@ describe("InstallPage", () => {
       search: "?installation_id=12345",
     };
 
-    renderWithRouter();
+    render(<InstallPageStack authValue={authValue} />);
 
     // Check for processing message immediately (before async completes)
     // The text appears in both the StatusNotification and the loading spinner
@@ -99,6 +82,11 @@ describe("InstallPage", () => {
   });
 
   it("displays error when installation_id is missing", async () => {
+    const authValue = {
+      ...defaultMockAuth,
+      refreshSession: mockRefreshSession,
+    };
+
     const originalURL = window.location;
     delete (window as any).location;
     (window as any).location = {
@@ -106,7 +94,7 @@ describe("InstallPage", () => {
       search: "",
     };
 
-    renderWithRouter();
+    render(<InstallPageStack authValue={authValue} />);
 
     await waitFor(() => {
       expect(screen.getByText(/missing installation id/i)).toBeInTheDocument();
@@ -122,7 +110,11 @@ describe("InstallPage", () => {
     });
 
     (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
-    (mockRefreshSession as jest.Mock).mockResolvedValue(undefined);
+
+    const authValue = {
+      ...defaultMockAuth,
+      refreshSession: mockRefreshSession,
+    };
 
     const originalURL = window.location;
     delete (window as any).location;
@@ -131,7 +123,7 @@ describe("InstallPage", () => {
       search: "?installation_id=12345",
     };
 
-    renderWithRouter();
+    render(<InstallPageStack authValue={authValue} />);
 
     // Resolve the promise within act() to handle state updates
     await act(async () => {
@@ -170,6 +162,11 @@ describe("InstallPage", () => {
     const error = new Error("Installation failed");
     (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
 
+    const authValue = {
+      ...defaultMockAuth,
+      refreshSession: mockRefreshSession,
+    };
+
     const originalURL = window.location;
     delete (window as any).location;
     (window as any).location = {
@@ -177,7 +174,7 @@ describe("InstallPage", () => {
       search: "?installation_id=12345",
     };
 
-    renderWithRouter();
+    render(<InstallPageStack authValue={authValue} />);
 
     // Reject the promise within act() to handle state updates
     await act(async () => {
@@ -202,7 +199,11 @@ describe("InstallPage", () => {
     });
 
     (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
-    (mockRefreshSession as jest.Mock).mockResolvedValue(undefined);
+
+    const authValue = {
+      ...defaultMockAuth,
+      refreshSession: mockRefreshSession,
+    };
 
     const originalURL = window.location;
     delete (window as any).location;
@@ -211,20 +212,7 @@ describe("InstallPage", () => {
       search: "?installation_id=12345",
     };
 
-    const UploadPage = () => <div data-testid="upload-page">Upload Page</div>;
-
-    const Stub = createRoutesStub([
-      {
-        path: "/install",
-        Component: InstallPage,
-      },
-      {
-        path: "/upload",
-        Component: UploadPage,
-      },
-    ]);
-
-    render(<Stub initialEntries={["/install"]} />);
+    render(<InstallPageStack authValue={authValue} />);
 
     // Resolve the promise within act() to handle state updates
     await act(async () => {
@@ -266,7 +254,7 @@ describe("InstallPage", () => {
 
     // Wait for navigation to upload page
     await waitFor(() => {
-      expect(screen.getByTestId("upload-page")).toBeInTheDocument();
+      expect(screen.getByTestId("upload-page-mock")).toBeInTheDocument();
     });
 
     jest.useRealTimers();
@@ -282,6 +270,11 @@ describe("InstallPage", () => {
     const error = new Error("Installation failed");
     (authApi.callback as jest.Mock).mockImplementation(() => callbackPromise);
 
+    const authValue = {
+      ...defaultMockAuth,
+      refreshSession: mockRefreshSession,
+    };
+
     const originalURL = window.location;
     delete (window as any).location;
     (window as any).location = {
@@ -289,20 +282,7 @@ describe("InstallPage", () => {
       search: "?installation_id=12345",
     };
 
-    const HomePage = () => <div data-testid="home-page">Home Page</div>;
-
-    const Stub = createRoutesStub([
-      {
-        path: "/install",
-        Component: InstallPage,
-      },
-      {
-        path: "/",
-        Component: HomePage,
-      },
-    ]);
-
-    render(<Stub initialEntries={["/install"]} />);
+    render(<InstallPageStack authValue={authValue} />);
 
     // Reject the promise within act() to handle state updates
     await act(async () => {
@@ -332,7 +312,7 @@ describe("InstallPage", () => {
 
     // Wait for navigation to home page
     await waitFor(() => {
-      expect(screen.getByTestId("home-page")).toBeInTheDocument();
+      expect(screen.getByTestId("home-page-mock")).toBeInTheDocument();
     });
 
     (window as any).location = originalURL;

@@ -4,9 +4,12 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createRoutesStub } from "react-router";
-import { UploadPage } from "../../../src/pages/UploadPage";
-import { useAuth } from "../../../src/hooks/useAuth";
+import { UploadPageStack } from "../../__mocks__/UploadPage.mock";
+import {
+  defaultMockAuth,
+  createAuthenticatedMockAuth,
+  createLoadingMockAuth,
+} from "../../__mocks__/useAuth.mock";
 
 // Mock dependencies
 jest.mock("../../../src/hooks/useAuth", () => ({
@@ -19,103 +22,33 @@ jest.mock("../../../src/services/api", () => ({
   },
 }));
 
-const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-
 describe("UploadPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     console.error = jest.fn();
   });
 
-  const renderWithRouter = () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/upload",
-        Component: UploadPage,
-      },
-      {
-        path: "/",
-        Component: () => <div data-testid="home-page">Home Page</div>,
-      },
-    ]);
-    return render(<Stub initialEntries={["/upload"]} />);
-  };
-
   it("renders loading state when authentication is loading", () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: true,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    const authValue = createLoadingMockAuth();
+    render(<UploadPageStack authValue={authValue} />);
 
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   it("redirects to home when not authenticated", async () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    const Stub = createRoutesStub([
-      {
-        path: "/upload",
-        Component: UploadPage,
-      },
-      {
-        path: "/",
-        Component: () => <div data-testid="home-page">Home Page</div>,
-      },
-    ]);
-
-    render(<Stub initialEntries={["/upload"]} />);
+    render(<UploadPageStack authValue={defaultMockAuth} />);
 
     await waitFor(
       () => {
-        expect(screen.getByTestId("home-page")).toBeInTheDocument();
+        expect(screen.getByTestId("home-page-mock")).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
   });
 
   it("renders upload page content when authenticated", () => {
-    mockUseAuth.mockReturnValue({
-      session: {
-        access_token: "test-token",
-        refresh_token: "test-refresh-token",
-        expires_in: 3600,
-        token_type: "bearer",
-        user: {
-          id: "test-id",
-          email: "github-123@faasr.app",
-          app_metadata: {},
-          user_metadata: {
-            installationId: "123",
-            githubLogin: "testuser",
-            githubId: 1,
-            avatarUrl: "https://example.com/avatar.png",
-          },
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
-        },
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    const authValue = createAuthenticatedMockAuth();
+    render(<UploadPageStack authValue={authValue} />);
 
     // Check for the heading specifically (not the button)
     expect(
@@ -130,47 +63,28 @@ describe("UploadPage", () => {
   });
 
   it("does not redirect when loading", () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: true,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    const authValue = createLoadingMockAuth();
+    render(<UploadPageStack authValue={authValue} />);
 
     // Should show loading state, not redirect
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   it("displays success notification when upload succeeds", async () => {
-    mockUseAuth.mockReturnValue({
-      session: {
-        access_token: "test-token",
-        refresh_token: "test-refresh-token",
-        expires_in: 3600,
-        token_type: "bearer",
-        user: {
-          id: "test-id",
-          email: "github-123@faasr.app",
-          app_metadata: {},
-          user_metadata: {
-            installationId: "123456",
-            githubLogin: "testuser",
-            githubId: 123,
-          },
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
+    const authValue = createAuthenticatedMockAuth({
+      user: {
+        id: "test-id",
+        email: "github-123@faasr.app",
+        app_metadata: {},
+        user_metadata: {
+          installationId: "123456",
+          githubLogin: "testuser",
+          githubId: 123,
         },
+        aud: "authenticated",
+        created_at: new Date().toISOString(),
       },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
+    } as any);
 
     const { workflowsApi } = require("../../../src/services/api");
     const { FileUploadIds } = require("../../../src/components/FileUpload.ids");
@@ -183,7 +97,7 @@ describe("UploadPage", () => {
 
     (workflowsApi.upload as jest.Mock).mockResolvedValue(mockResponse);
 
-    renderWithRouter();
+    render(<UploadPageStack authValue={authValue} />);
 
     // Upload a file using the file input test id
     const fileInput = screen.getByTestId(
@@ -222,38 +136,27 @@ describe("UploadPage", () => {
   });
 
   it("displays error notification when upload fails", async () => {
-    mockUseAuth.mockReturnValue({
-      session: {
-        access_token: "test-token",
-        refresh_token: "test-refresh-token",
-        expires_in: 3600,
-        token_type: "bearer",
-        user: {
-          id: "test-id",
-          email: "github-123@faasr.app",
-          app_metadata: {},
-          user_metadata: {
-            installationId: "123456",
-            githubLogin: "testuser",
-            githubId: 123,
-          },
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
+    const authValue = createAuthenticatedMockAuth({
+      user: {
+        id: "test-id",
+        email: "github-123@faasr.app",
+        app_metadata: {},
+        user_metadata: {
+          installationId: "123456",
+          githubLogin: "testuser",
+          githubId: 123,
         },
+        aud: "authenticated",
+        created_at: new Date().toISOString(),
       },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
+    } as any);
 
     const { workflowsApi } = require("../../../src/services/api");
     const { FileUploadIds } = require("../../../src/components/FileUpload.ids");
     const uploadError = new Error("Upload failed");
     (workflowsApi.upload as jest.Mock).mockRejectedValue(uploadError);
 
-    renderWithRouter();
+    render(<UploadPageStack authValue={authValue} />);
 
     // Upload a file using the file input test id
     const fileInput = screen.getByTestId(
@@ -292,31 +195,20 @@ describe("UploadPage", () => {
   });
 
   it("dismisses notification when dismiss is clicked", async () => {
-    mockUseAuth.mockReturnValue({
-      session: {
-        access_token: "test-token",
-        refresh_token: "test-refresh-token",
-        expires_in: 3600,
-        token_type: "bearer",
-        user: {
-          id: "test-id",
-          email: "github-123@faasr.app",
-          app_metadata: {},
-          user_metadata: {
-            installationId: "123456",
-            githubLogin: "testuser",
-            githubId: 123,
-          },
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
+    const authValue = createAuthenticatedMockAuth({
+      user: {
+        id: "test-id",
+        email: "github-123@faasr.app",
+        app_metadata: {},
+        user_metadata: {
+          installationId: "123456",
+          githubLogin: "testuser",
+          githubId: 123,
         },
+        aud: "authenticated",
+        created_at: new Date().toISOString(),
       },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
+    } as any);
 
     const { workflowsApi } = require("../../../src/services/api");
     const { FileUploadIds } = require("../../../src/components/FileUpload.ids");
@@ -332,7 +224,7 @@ describe("UploadPage", () => {
 
     (workflowsApi.upload as jest.Mock).mockResolvedValue(mockResponse);
 
-    renderWithRouter();
+    render(<UploadPageStack authValue={authValue} />);
 
     // Upload a file using the file input test id
     const fileInput = screen.getByTestId(

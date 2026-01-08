@@ -4,9 +4,12 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createRoutesStub } from "react-router";
-import { HomePage } from "../../../src/pages/HomePage";
-import { useAuth } from "../../../src/hooks/useAuth";
+import { HomePageStack } from "../../__mocks__/HomePage.mock";
+import {
+  defaultMockAuth,
+  createAuthenticatedMockAuth,
+  createLoadingMockAuth,
+} from "../../__mocks__/useAuth.mock";
 import { authApi } from "../../../src/services/api";
 
 // Mock dependencies
@@ -20,35 +23,14 @@ jest.mock("../../../src/services/api", () => ({
   },
 }));
 
-const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-
 describe("HomePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     console.error = jest.fn();
   });
 
-  const renderWithRouter = () => {
-    const Stub = createRoutesStub([
-      {
-        path: "/",
-        Component: HomePage,
-      },
-    ]);
-    return render(<Stub initialEntries={["/"]} />);
-  };
-
   it("renders welcome message and description", () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    render(<HomePageStack authValue={defaultMockAuth} />);
 
     expect(screen.getByText("Welcome to FaaSr")).toBeInTheDocument();
     expect(
@@ -57,16 +39,7 @@ describe("HomePage", () => {
   });
 
   it("renders InstallButton", () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    render(<HomePageStack authValue={defaultMockAuth} />);
 
     expect(
       screen.getByRole("button", { name: /install faasr/i })
@@ -74,16 +47,7 @@ describe("HomePage", () => {
   });
 
   it("renders What is FaaSr section", () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    render(<HomePageStack authValue={defaultMockAuth} />);
 
     expect(screen.getByText("What is FaaSr?")).toBeInTheDocument();
     expect(
@@ -92,74 +56,28 @@ describe("HomePage", () => {
   });
 
   it("redirects to /upload when authenticated", async () => {
-    mockUseAuth.mockReturnValue({
-      session: {
-        installationId: "123",
-        userLogin: "testuser",
-        userId: 1,
-        avatarUrl: "https://example.com/avatar.png",
-        jwtToken: "token",
-        createdAt: new Date(),
-        expiresAt: new Date(),
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    const UploadPage = () => <div data-testid="upload-page">Upload Page</div>;
-
-    const Stub = createRoutesStub([
-      {
-        path: "/",
-        Component: HomePage,
-      },
-      {
-        path: "/upload",
-        Component: UploadPage,
-      },
-    ]);
-
-    render(<Stub initialEntries={["/"]} />);
+    const authValue = createAuthenticatedMockAuth();
+    render(<HomePageStack authValue={authValue} />);
 
     await waitFor(
       () => {
-        // Check that we've navigated to /upload by looking for upload page content
-        expect(screen.getByTestId("upload-page")).toBeInTheDocument();
+        // Check that we've navigated to /upload by looking for upload page mock
+        expect(screen.getByTestId("upload-page-mock")).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
   });
 
   it("does not redirect when loading", () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: true,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    const authValue = createLoadingMockAuth();
+    render(<HomePageStack authValue={authValue} />);
 
     // Should still be on home page
     expect(screen.getByText("Welcome to FaaSr")).toBeInTheDocument();
   });
 
   it("does not redirect when not authenticated", () => {
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
-    renderWithRouter();
+    render(<HomePageStack authValue={defaultMockAuth} />);
 
     // Should still be on home page
     expect(screen.getByText("Welcome to FaaSr")).toBeInTheDocument();
@@ -168,19 +86,10 @@ describe("HomePage", () => {
   it("calls handleInstallError and logs to console when install fails", async () => {
     const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
-    mockUseAuth.mockReturnValue({
-      session: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      refreshSession: jest.fn(),
-      logout: jest.fn(),
-    });
-
     const installError = new Error("Installation failed");
     (authApi.install as jest.Mock).mockRejectedValue(installError);
 
-    renderWithRouter();
+    render(<HomePageStack authValue={defaultMockAuth} />);
 
     const installButton = screen.getByRole("button", {
       name: /install faasr/i,
