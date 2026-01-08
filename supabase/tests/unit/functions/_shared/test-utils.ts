@@ -606,7 +606,16 @@ export function createMockWorkflowStatusService(
 }
 
 // ============================================================================
-// 10. Request Mock Factory
+// 10. Supabase Auth Mocks
+// ============================================================================
+
+export {
+  createMockSupabaseAdmin,
+  createMockSupabaseClient,
+} from './supabase-auth-mocks.ts';
+
+// ============================================================================
+// 11. Request Mock Factory
 // ============================================================================
 
 export interface MockRequestConfig {

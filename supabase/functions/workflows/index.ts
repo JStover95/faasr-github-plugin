@@ -28,6 +28,7 @@ export const deps = {
   GitHubClientService,
   WorkflowUploadService,
   WorkflowStatusService,
+  getUserFromRequest,
 };
 
 /**
@@ -51,7 +52,7 @@ export async function handleUpload(req: Request): Promise<Response> {
   const corsHeaders = getCorsHeaders(req);
   try {
     // Validate session
-    const session = await getUserFromRequest(req);
+    const session = await deps.getUserFromRequest(req);
     if (!session) {
       return createAuthErrorResponse(req);
     }
@@ -127,7 +128,7 @@ export async function handleStatus(
   const corsHeaders = getCorsHeaders(req);
   try {
     // Validate session
-    const session = await getUserFromRequest(req);
+    const session = await deps.getUserFromRequest(req);
     if (!session) {
       return createAuthErrorResponse(req);
     }

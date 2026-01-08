@@ -10,6 +10,7 @@
 
 import { createClient } from "./deps.ts";
 import type { UserSession } from "./types.ts";
+import { extractSessionToken, validateSessionToken } from "./auth.ts";
 
 /**
  * Supabase user structure with GitHub metadata
@@ -27,26 +28,59 @@ interface SupabaseUser {
 }
 
 /**
- * Create Supabase Admin client for server-side operations
+ * Type guard to verify user metadata has required GitHub fields
  *
- * Uses SERVICE_ROLE_KEY for admin operations like creating users and sessions.
- * This client bypasses RLS and should only be used in edge functions.
- *
- * @returns Configured Supabase Admin client
+ * @param metadata - User metadata object from Supabase
+ * @returns True if metadata has the expected GitHub structure
  */
-export function createSupabaseAdmin() {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error(
-      "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required"
-    );
+function hasGitHubMetadata(
+  metadata: Record<string, unknown> | null | undefined
+): metadata is {
+  installationId: string;
+  githubLogin: string;
+  githubId: number;
+  avatarUrl?: string;
+} {
+  if (!metadata || typeof metadata !== "object") {
+    return false;
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  return (
+    typeof metadata.installationId === "string" &&
+    typeof metadata.githubLogin === "string" &&
+    typeof metadata.githubId === "number" &&
+    (metadata.avatarUrl === undefined || typeof metadata.avatarUrl === "string")
+  );
+}
+
+/**
+ * Dependencies object for dependency injection and testing
+ * This allows dependencies to be stubbed in tests
+ */
+export const deps = {
+  createClient,
+  createSupabaseAdmin: () => {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error(
+        "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required"
+      );
+    }
+
+    return deps.createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  },
+};
+
+/**
+ * Create Supabase Admin client with service role key
+ * Delegates to deps.createSupabaseAdmin to allow stubbing in tests
+ */
+export function createSupabaseAdmin() {
+  return deps.createSupabaseAdmin();
 }
 
 /**
@@ -168,7 +202,7 @@ export async function createOrUpdateSupabaseUser(
     );
   }
 
-  const regularClient = createClient(supabaseUrl, anonKey, {
+  const regularClient = deps.createClient(supabaseUrl, anonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
@@ -195,9 +229,10 @@ export async function createOrUpdateSupabaseUser(
 }
 
 /**
- * Extract user session from request Authorization header
+ * Extract user session from request Authorization header or cookie
  *
- * Validates the Supabase Auth token and extracts user metadata.
+ * First tries to validate a Supabase Auth token from the Authorization header.
+ * If that fails, falls back to validating a JWT token from cookies (legacy support).
  * Converts Supabase user format to UserSession format for compatibility.
  *
  * @param req - HTTP request object
@@ -206,44 +241,52 @@ export async function createOrUpdateSupabaseUser(
 export async function getUserFromRequest(
   req: Request
 ): Promise<UserSession | null> {
+  // Try Supabase Auth token from Authorization header first
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (supabaseUrl && anonKey) {
+      const supabase = deps.createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (!error && user) {
+        // Validate user metadata structure
+        if (!hasGitHubMetadata(user.user_metadata)) {
+          return null;
+        }
+
+        // Convert to UserSession format for compatibility
+        return {
+          installationId: user.user_metadata.installationId,
+          userLogin: user.user_metadata.githubLogin,
+          userId: user.user_metadata.githubId,
+          avatarUrl: user.user_metadata.avatarUrl,
+          jwtToken: token,
+          createdAt: new Date(user.created_at),
+          expiresAt: new Date(), // Not used with Supabase tokens
+        };
+      }
+    }
   }
 
-  const token = authHeader.replace("Bearer ", "");
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
-  if (!supabaseUrl || !anonKey) {
-    console.error(
-      "SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required"
-    );
-    return null;
+  // Fallback to JWT token from cookie (legacy support for tests)
+  const cookieToken = extractSessionToken(req.headers);
+  if (cookieToken) {
+    const session = validateSessionToken(cookieToken);
+    if (session) {
+      return session;
+    }
   }
 
-  const supabase = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    return null;
-  }
-
-  // Convert to UserSession format for compatibility
-  return {
-    installationId: user.user_metadata.installationId as string,
-    userLogin: user.user_metadata.githubLogin as string,
-    userId: user.user_metadata.githubId as number,
-    avatarUrl: user.user_metadata.avatarUrl as string | undefined,
-    jwtToken: token,
-    createdAt: new Date(user.created_at),
-    expiresAt: new Date(), // Not used with Supabase tokens
-  };
+  return null;
 }
